@@ -1,0 +1,124 @@
+name: Deploy
+
+on:
+  push:
+    branches: [ "master" ]
+  pull_request:
+    branches: [ "master" ]
+
+env:
+  PUBLISH_BRANCH: gh-pages
+  PUBLISH_DIR: public
+  DEPLOY_REPO: ${{ github.repository }}
+  DEPLOY_BASE_DIR: /usr/share/nginx/html
+  DEPLOY_DIR_NAME: quant-blog
+
+jobs:
+  all:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        submodules: 'recursive'
+    - name: Set outputs
+      id: vars
+      run: echo "sha_short=$(git rev-parse --short=8 HEAD)" >> $GITHUB_OUTPUT
+    - name: Set up gh-pages branch
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        rm -rf "${PUBLISH_DIR}"
+        git config --global user.name "arloor"
+        git config --global user.email "admin@arloor.com"
+        if ! gh repo clone "${DEPLOY_REPO}" "${PUBLISH_DIR}" -- --depth=1 --single-branch -b "${PUBLISH_BRANCH}";
+        then
+          echo first time, create gh-pages branch
+          mkdir "${PUBLISH_DIR}"
+          cd "${PUBLISH_DIR}"
+          git init
+          git checkout --orphan "${PUBLISH_BRANCH}"
+          git remote add origin "https://github.com/${DEPLOY_REPO}.git"
+          cd ..
+        fi
+    - name: Setup Hugo
+      uses: peaceiris/actions-hugo@v3
+      with:
+          hugo-version: 'latest'
+          extended: true
+    # - name: setup hugo
+    #   run: |
+    #     hugoVersion="0.139.4"
+    #     hugoURL=https://github.com/gohugoio/hugo/releases/download/v${hugoVersion}/hugo_extended_${hugoVersion}_Linux-64bit.tar.gz
+    #     sudo apt-get install -y tar curl
+    #     mkdir /tmp/hugo
+    #     curl -Lf "$hugoURL" -o /tmp/hugo/hugo.tar.gz
+    #     tar -zxf /tmp/hugo/hugo.tar.gz -C /tmp/hugo/
+    #     install /tmp/hugo/hugo /usr/local/bin/
+    - name: hugo build
+      run: |
+        hugo -d "${PUBLISH_DIR}"
+    - name: commit and push
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        cd "${PUBLISH_DIR}"
+        git config url.https://x-access-token:${GH_TOKEN}@github.com/.insteadOf https://github.com/
+        git config user.name "arloor"
+        git config user.email "admin@arloor.com"
+        git add .&&git commit -m "updates from ${{ steps.vars.outputs.sha_short }}" && git push -u origin "${PUBLISH_BRANCH}" -f || echo "nothing to commit"
+    # - name: Deploy
+    #   uses: peaceiris/actions-gh-pages@v3
+    #   with:
+    #     github_token: ${{ secrets.GITHUB_TOKEN }}
+    #     publish_dir: ./public
+    - name: install ssh keys
+      run: |
+        install -m 600 -D /dev/null ~/.ssh/id_rsa
+        echo "${{ secrets.SSH_PRIVATE_KEY }}" >> ~/.ssh/id_rsa
+        for i in ${{ secrets.SSH_HOST }};do
+          echo "add ${i} to known_hosts"
+          ssh-keyscan -H ${i} >> ~/.ssh/known_hosts
+        done
+    - name: connect and deploy
+      run: |
+        for i in ${{ secrets.SSH_HOST }};do
+          echo "connect to ${i}";
+          ssh root@${i} "DEPLOY_BASE_DIR='${DEPLOY_BASE_DIR}' DEPLOY_DIR_NAME='${DEPLOY_DIR_NAME}' DEPLOY_REPO='${DEPLOY_REPO}' PUBLISH_BRANCH='${PUBLISH_BRANCH}' bash -s" <<'REMOTE'
+            target="${DEPLOY_BASE_DIR}/${DEPLOY_DIR_NAME}"
+            repo_url="https://github.com/${DEPLOY_REPO}.git"
+            mkdir -p "${DEPLOY_BASE_DIR}";
+            if [ ! -d "${target}" -o ! -d "${target}/.git" ];then
+              echo "${DEPLOY_DIR_NAME}目录不存在/不是git仓库，clone";
+              rm -rf "${target}";
+              git clone "${repo_url}" --depth=1 -b "${PUBLISH_BRANCH}" "${target}";
+              exit $?; # 退出ssh，并将返回值传递给github actions
+            else
+              echo "${DEPLOY_DIR_NAME}目录存在，是git仓库，pull";
+              cd "${target}";
+              git reset --hard  > /dev/null;
+              git checkout "${PUBLISH_BRANCH}"  > /dev/null;
+              git reset --hard  > /dev/null;
+              head=$(git rev-parse HEAD);
+              git pull --ff-only && {
+                newHead=$(git rev-parse HEAD);
+                if [ "$head" = "$newHead" ];then
+                  echo "git pull 没有发现变更";
+                else
+                  echo "最新变更如下：";
+                  git -P log -1 -p --color=always --pretty=oneline -- posts ':!posts/index.html' ':!posts/index.xml' |head -n 100;
+                fi
+              } || {
+                echo "git pull 失败，重新clone"
+                cd "${DEPLOY_BASE_DIR}"
+                rm -rf "${target}";
+                git clone "${repo_url}" --depth=1 -b "${PUBLISH_BRANCH}" "${target}";
+                cd "${target}";
+              }
+              exit $?; # 退出ssh，并将返回值传递给github actions
+            fi
+        REMOTE
+        done
+    - name: cleanup
+      run: |
+        rm -rf ~/.ssh
+        rm -rf ~/.gitconfig

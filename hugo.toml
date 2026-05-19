@@ -1,0 +1,56 @@
+baseURL = "/"
+languageCode = "zh-CN"
+hasCJKLanguage = true
+title = "量化日记"
+theme = "hyde-arloor"
+enableRobotsTXT = true
+summaryLength = 50
+
+[outputs]
+home = ["HTML", "RSS"]
+
+[pagination]
+pagerSize = 10
+
+[params]
+layoutReverse = false
+author = "刘港欢"
+title = "量化日记"
+description = "量化研究、交易复盘与系统记录"
+authorimage = "/img/head.jpeg"
+dateformat = "2006-01-02"
+copyright = "arloor"
+license = "CC BY-SA 4.0"
+licenseURL = "https://creativecommons.org/licenses/by-sa/4.0"
+showBuiltWith = true
+highlightjs = true
+highlightjsstyle = "atom-one-dark"
+toc = "hugo"
+
+[params.meta]
+keywords = "量化, 交易, 股票, 策略, 回测"
+description = "量化研究、交易复盘与系统记录"
+
+[params.social]
+github = "arloor"
+twitter = "njulgh"
+telegram = "never_contact_me"
+email = "admin@arloor.com"
+
+[[menu.main]]
+name = "文章"
+weight = 1
+identifier = "文章"
+url = "/posts/"
+
+[[menu.main]]
+name = "分类"
+weight = 2
+identifier = "分类"
+url = "/tags/"
+
+[[menu.main]]
+name = "关于"
+weight = 3
+identifier = "关于"
+url = "/about/"
