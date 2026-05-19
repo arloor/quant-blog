@@ -6,6 +6,9 @@ on:
   pull_request:
     branches: [ "master" ]
 
+permissions:
+  contents: write
+
 env:
   PUBLISH_BRANCH: gh-pages
   PUBLISH_DIR: public
@@ -24,9 +27,11 @@ jobs:
       id: vars
       run: echo "sha_short=$(git rev-parse --short=8 HEAD)" >> $GITHUB_OUTPUT
     - name: Set up gh-pages branch
+      if: github.event_name == 'push'
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
+        set -euo pipefail
         rm -rf "${PUBLISH_DIR}"
         git config --global user.name "arloor"
         git config --global user.email "admin@arloor.com"
@@ -58,21 +63,31 @@ jobs:
       run: |
         hugo -d "${PUBLISH_DIR}"
     - name: commit and push
+      if: github.event_name == 'push'
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
+        set -euo pipefail
         cd "${PUBLISH_DIR}"
         git config url.https://x-access-token:${GH_TOKEN}@github.com/.insteadOf https://github.com/
         git config user.name "arloor"
         git config user.email "admin@arloor.com"
-        git add .&&git commit -m "updates from ${{ steps.vars.outputs.sha_short }}" && git push -u origin "${PUBLISH_BRANCH}" -f || echo "nothing to commit"
+        git add .
+        if git diff --cached --quiet; then
+          echo "nothing to commit"
+        else
+          git commit -m "updates from ${{ steps.vars.outputs.sha_short }}"
+          git push -u origin "${PUBLISH_BRANCH}" -f
+        fi
     # - name: Deploy
     #   uses: peaceiris/actions-gh-pages@v3
     #   with:
     #     github_token: ${{ secrets.GITHUB_TOKEN }}
     #     publish_dir: ./public
     - name: install ssh keys
+      if: github.event_name == 'push'
       run: |
+        set -euo pipefail
         install -m 600 -D /dev/null ~/.ssh/id_rsa
         echo "${{ secrets.SSH_PRIVATE_KEY }}" >> ~/.ssh/id_rsa
         for i in ${{ secrets.SSH_HOST }};do
@@ -80,7 +95,9 @@ jobs:
           ssh-keyscan -H ${i} >> ~/.ssh/known_hosts
         done
     - name: connect and deploy
+      if: github.event_name == 'push'
       run: |
+        set -euo pipefail
         for i in ${{ secrets.SSH_HOST }};do
           echo "connect to ${i}";
           ssh root@${i} "DEPLOY_BASE_DIR='${DEPLOY_BASE_DIR}' DEPLOY_DIR_NAME='${DEPLOY_DIR_NAME}' DEPLOY_REPO='${DEPLOY_REPO}' PUBLISH_BRANCH='${PUBLISH_BRANCH}' bash -s" <<'REMOTE'
