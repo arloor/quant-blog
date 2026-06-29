@@ -1,7 +1,7 @@
 ---
 title: "tick-stream：A股 tick 异常检测与飞书告警规则整理"
-date: 2026-06-29T12:00:00+08:00
-lastmod: 2026-06-29T12:00:00+08:00
+date: 2026-06-29T11:00:00+08:00
+lastmod: 2026-06-29T11:00:00+08:00
 draft: false
 categories: []
 tags: ["A股", "tick", "量化监控", "飞书告警"]
