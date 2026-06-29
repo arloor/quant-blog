@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+    
+
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
+    
+    <link rel="canonical" href="/posts/tick-stream-anomaly-alert-rules-20260629/">
+    
+    <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<!-- Enable responsiveness on mobile devices -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="generator" content="Hugo 0.163.3">
+
+    
+    
+    
+
+<title>tick-stream：A股 tick 异常检测与飞书告警规则整理 • 量化日记</title>
+<meta name="description" content="量化研究、交易复盘与系统记录">
+<meta name="keywords" content="量化, 交易, 股票, 策略, 回测">
+
+	<meta name="twitter:card" content="summary">
+	<meta name="twitter:title" content="tick-stream：A股 tick 异常检测与飞书告警规则整理">
+	<meta name="twitter:description" content="整理 tick-stream 项目中价格跳变、动量异常、盘口流动性异常的检测逻辑，以及候选异常如何过滤、聚合、冷却并发送飞书通知。">
+			<meta name="twitter:site" content="@njulgh">
+
+<meta property="og:url" content="/posts/tick-stream-anomaly-alert-rules-20260629/">
+	<meta property="og:site_name" content="量化日记">
+	<meta property="og:title" content="tick-stream：A股 tick 异常检测与飞书告警规则整理">
+	<meta property="og:description" content="整理 tick-stream 项目中价格跳变、动量异常、盘口流动性异常的检测逻辑，以及候选异常如何过滤、聚合、冷却并发送飞书通知。">
+	<meta property="og:locale" content="zh_CN">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="posts">
+		<meta property="article:published_time" content="2026-06-29T11:00:00+08:00">
+		<meta property="article:modified_time" content="2026-06-29T11:00:00+08:00">
+		<meta property="article:tag" content="A股">
+		<meta property="article:tag" content="Tick">
+		<meta property="article:tag" content="量化监控">
+		<meta property="article:tag" content="飞书告警">
+
+
+    
+
+
+
+
+
+<link rel="stylesheet" href="/styles/atom-one-dark.min.css">
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/scss/hyde-hyde.debf1b963c1830f6b9b96ee48c2b4a22c31c7c3885a87bed290c0e198fc6a08d.css" integrity="sha256-3r8bljwYMPa5uW7kjCtKIsMcfDiFqHvtKQwOGY/GoI0=">
+
+
+<link rel="stylesheet" href="/scss/print.2744dcbf8a0b2e74f8a50e4b34e5f441be7cf93cc7de27029121c6a09f9e77bc.css" integrity="sha256-J0Tcv4oLLnT4pQ5LNOX0Qb58&#43;TzH3icCkSHGoJ&#43;ed7w=" media="print">
+
+
+
+
+<link rel="stylesheet" href="/scss/hugo-toc.6b7222b4ddd3cebd47d144a2e37ade6cbbb64f47e31d8feac655896156ade206.css" integrity="sha256-a3IitN3Tzr1H0USi43rebLu2T0fjHY/qxlWJYVat4gY=">
+
+
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <!-- Icons -->
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+    <link rel="shortcut icon" href="/favicon.png">
+    
+    
+
+</head>
+
+
+
+<body class="  ">
+  
+<div class="sidebar">
+  <div class="container ">
+    <div class="sidebar-about">
+      <span class="site__title">
+        <a href="/">
+          
+          量化日记
+          
+        </a>
+      </span>
+      <a href="/">
+        
+        
+        <div class="author-image">
+          <img src="/img/head.jpeg" alt="Author Image" class="img--circle img--headshot element--center">
+        </div>
+        
+        
+      </a>
+      
+      <p class="site__description">
+         量化研究、交易复盘与系统记录 
+      </p>
+    </div>
+    <div class="collapsible-menu">
+      <input type="checkbox" id="menuToggle">
+      <label for="menuToggle">量化日记</label>
+      <div class="menu-content menu-content--mobile">
+        <div class="show-in-small">
+          <a href="/">
+            
+            
+            <div class="author-image">
+              <img src="/img/head.jpeg" alt="Author Image"
+                class="img--circle img--headshot element--center">
+            </div>
+            
+            
+          </a>
+        </div>
+        <div>
+	<ul class="sidebar-nav">
+		 
+		 
+			 
+				<li>
+					<a href="/posts/">
+						<span>文章</span>
+					</a>
+				</li>
+			 
+		 
+			 
+				<li>
+					<a href="/tags/">
+						<span>分类</span>
+					</a>
+				</li>
+			 
+		 
+			 
+				<li>
+					<a href="/about/">
+						<span>关于</span>
+					</a>
+				</li>
+			 
+		
+	</ul>
+</div>
+
+        <section class="social">
+	
+	<a href="https://x.com/njulgh" rel="me" target="_blank"><i class="fa-brands fa-x-twitter fa-lg"></i></a>
+	
+	
+	
+	
+	
+	<a href="https://github.com/arloor" rel="me" target="_blank"><i class="fa-brands fa-github fa-lg"></i></a>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<a href="https://t.me/never_contact_me" rel="me" target="_blank"><i class="fa-brands fa-telegram fa-lg" aria-hidden="true"></i></a>
+	
+	
+	
+	
+	<a href="mailto:admin@arloor.com" rel="me" target="_blank"><i class="fa-solid fa-at fa-lg"></i></a>
+	
+	
+	
+	
+</section>
+      </div>
+    </div>
+    <div class="menu-content menu-content--desktop">
+      <div>
+	<ul class="sidebar-nav">
+		 
+		 
+			 
+				<li>
+					<a href="/posts/">
+						<span>文章</span>
+					</a>
+				</li>
+			 
+		 
+			 
+				<li>
+					<a href="/tags/">
+						<span>分类</span>
+					</a>
+				</li>
+			 
+		 
+			 
+				<li>
+					<a href="/about/">
+						<span>关于</span>
+					</a>
+				</li>
+			 
+		
+	</ul>
+</div>
+
+    </div>
+    <div class="social-wrap social-wrap--desktop">
+      <section class="social">
+	
+	<a href="https://x.com/njulgh" rel="me" target="_blank"><i class="fa-brands fa-x-twitter fa-lg"></i></a>
+	
+	
+	
+	
+	
+	<a href="https://github.com/arloor" rel="me" target="_blank"><i class="fa-brands fa-github fa-lg"></i></a>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<a href="https://t.me/never_contact_me" rel="me" target="_blank"><i class="fa-brands fa-telegram fa-lg" aria-hidden="true"></i></a>
+	
+	
+	
+	
+	<a href="mailto:admin@arloor.com" rel="me" target="_blank"><i class="fa-solid fa-at fa-lg"></i></a>
+	
+	
+	
+	
+</section>
+    </div>
+    
+<div class="copyright">
+  &copy; 2026 arloor
+  
+    <a href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a>
+  
+</div>
+
+
+<div class="builtwith">
+Built with <a href="https://gohugo.io">Hugo</a> ❤️ <a href="https://github.com/arloor/hyde-arloor">hyde-arloor</a>.
+</div>
+
+
+  </div>
+</div>
+
+  <div class="content container">
+    
+    
+<article>
+  <header>
+    <h1>tick-stream：A股 tick 异常检测与飞书告警规则整理</h1>
+    
+    
+<div class="post__meta">
+    
+    
+      <i class="fas fa-calendar-alt"></i> 2026-06-29
+    
+    
+    
+    
+    
+      
+      
+          <br/>
+           <i class="fas fa-tags"></i>
+          
+          <a class="badge badge-tag" href="/tags/a%E8%82%A1">a股</a>
+           
+      
+          <a class="badge badge-tag" href="/tags/tick">tick</a>
+           
+      
+          <a class="badge badge-tag" href="/tags/%E9%87%8F%E5%8C%96%E7%9B%91%E6%8E%A7">量化监控</a>
+           
+      
+          <a class="badge badge-tag" href="/tags/%E9%A3%9E%E4%B9%A6%E5%91%8A%E8%AD%A6">飞书告警</a>
+          
+      
+    
+    
+    <br/>
+    <i class="fas fa-clock"></i> 13 min read
+</div>
+
+
+  </header>
+  
+  
+  
+    <div class="toc-wrapper">
+      <input type="checkbox" id="tocToggle">
+      <label for="tocToggle">Table of Content</label>
+      
+          <nav id="TableOfContents">
+  <ul>
+    <li><a href="#整体处理链路">整体处理链路</a></li>
+    <li><a href="#tick-质量过滤">Tick 质量过滤</a></li>
+    <li><a href="#特征快照">特征快照</a></li>
+    <li><a href="#数学符号约定">数学符号约定</a></li>
+    <li><a href="#价格跳变规则">价格跳变规则</a></li>
+    <li><a href="#动量异常规则">动量异常规则</a>
+      <ul>
+        <li><a href="#第一步取脉冲窗口">第一步：取脉冲窗口</a></li>
+        <li><a href="#第二步真实位移门槛">第二步：真实位移门槛</a></li>
+        <li><a href="#第三步构造基准速度样本">第三步：构造基准速度样本</a></li>
+        <li><a href="#第四步低波动保护">第四步：低波动保护</a></li>
+        <li><a href="#第五步计算-robust-z-score">第五步：计算 robust z-score</a></li>
+        <li><a href="#第六步动量异常触发">第六步：动量异常触发</a></li>
+      </ul>
+    </li>
+    <li><a href="#盘口流动性异常规则">盘口流动性异常规则</a>
+      <ul>
+        <li><a href="#第一步计算五档总量">第一步：计算五档总量</a></li>
+        <li><a href="#第二步计算挂单变化">第二步：计算挂单变化</a></li>
+        <li><a href="#第三步撤挂压力">第三步：撤挂压力</a></li>
+        <li><a href="#第四步买卖盘失衡">第四步：买卖盘失衡</a></li>
+        <li><a href="#第五步盘口净压力">第五步：盘口净压力</a></li>
+        <li><a href="#第六步盘口信号命中">第六步：盘口信号命中</a></li>
+        <li><a href="#成交活跃度公式">成交活跃度公式</a></li>
+      </ul>
+    </li>
+    <li><a href="#候选异常如何变成可发送告警">候选异常如何变成可发送告警</a>
+      <ul>
+        <li><a href="#价格跳变">价格跳变</a></li>
+        <li><a href="#动量异常">动量异常</a></li>
+        <li><a href="#盘口流动性异常">盘口流动性异常</a></li>
+      </ul>
+    </li>
+    <li><a href="#告警聚合规则">告警聚合规则</a></li>
+    <li><a href="#冷却和反向震荡保护">冷却和反向震荡保护</a></li>
+    <li><a href="#飞书消息格式">飞书消息格式</a></li>
+    <li><a href="#关键参数速查">关键参数速查</a></li>
+    <li><a href="#我的理解">我的理解</a></li>
+    <li><a href="#附录动量-z-分数计算例子">附录：动量 Z 分数计算例子</a></li>
+  </ul>
+</nav>
+      
+    </div>
+  
+  
+  <div class="post">
+    <p>这篇文章整理 <code>tick-stream</code> 当前版本的异常检测规则和告警发送规则。它不是交易策略，也不会自动下单；它更像一个实时监控器：订阅标的池 tick，识别短时间内的价格、动量、盘口异常，再把真正值得看的信号合并成飞书通知。</p>
+<blockquote>
+<p>仅作为个人技术记录和复盘材料，不构成任何投资建议。</p>
+</blockquote>
+<h2 id="整体处理链路">整体处理链路</h2>
+<p>实时运行时，每一条 tick 会走下面这条链路：</p>
+<ol>
+<li>标准化 tick 字段，包括标的代码、事件时间、最新价、成交量、成交额、盘口五档。</li>
+<li>做质量过滤，剔除无效、重复、乱序、非标的池内、忽略时段内的 tick。</li>
+<li>把通过过滤的 tick 放入每个标的自己的滚动窗口。</li>
+<li>计算特征快照，包括短窗涨跌幅、动量速度、成交活跃度、盘口失衡、撤挂压力等。</li>
+<li>分别运行价格跳变、动量异常、盘口流动性异常三个检测器。</li>
+<li>把检测出来的候选异常再过一层“可报告性”过滤，避免噪音直接发通知。</li>
+<li>对同一标的在聚合窗口内的多个异常做合并。</li>
+<li>经过冷却和反向震荡保护后，构造飞书 <code>post</code> 消息并发送。</li>
+<li>全程写 JSONL 审计日志，方便回放和复盘。</li>
+</ol>
+<p>换句话说，项目里有两个层次的规则：</p>
+<ul>
+<li>检测规则：判断“这里是否有异常候选”。</li>
+<li>告警规则：判断“这个异常候选是否值得发到飞书”。</li>
+</ul>
+<p>这个分层很重要。检测层可以更敏感，尽量记录现场；告警层则更克制，避免把普通盘口抖动和微小价格变化推给人。</p>
+<h2 id="tick-质量过滤">Tick 质量过滤</h2>
+<p>进入检测前，系统先判断 tick 是否可用。</p>
+<p>会被拒绝或忽略的情况包括：</p>
+<table>
+	<thead>
+			<tr>
+					<th>状态</th>
+					<th>规则</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>malformed</td>
+					<td>缺少标的代码、事件时间，或者最新价为空、非正数</td>
+			</tr>
+			<tr>
+					<td>ignored</td>
+					<td>标的不在 active watchlist 中</td>
+			</tr>
+			<tr>
+					<td>duplicate</td>
+					<td>同一标的事件时间等于最近已接受 tick</td>
+			</tr>
+			<tr>
+					<td>out_of_order</td>
+					<td>同一标的事件时间早于最近已接受 tick</td>
+			</tr>
+			<tr>
+					<td>ignored session</td>
+					<td>命中规则配置里的 <code>ignored_sessions</code></td>
+			</tr>
+	</tbody>
+</table>
+<p><code>ignored_sessions</code> 主要用来避开开盘集合竞价、临近收盘等容易产生结构性噪音的时间段。比如本地配置里常见的写法是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">ignored_sessions</span>:
+</span></span><span style="display:flex;"><span>- <span style="color:#f92672">start</span>: <span style="color:#ae81ff">09</span>:<span style="color:#ae81ff">25</span>:<span style="color:#ae81ff">00</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">end</span>: <span style="color:#ae81ff">09</span>:<span style="color:#ae81ff">35</span>:<span style="color:#ae81ff">00</span>
+</span></span><span style="display:flex;"><span>- <span style="color:#f92672">start</span>: <span style="color:#e6db74">&#34;14:55:00&#34;</span>
+</span></span><span style="display:flex;"><span>  <span style="color:#f92672">end</span>: <span style="color:#e6db74">&#34;15:00:00&#34;</span>
+</span></span></code></pre></div><p>只有 <code>accepted</code> 的 tick 才会进入后续窗口和检测器。</p>
+<h2 id="特征快照">特征快照</h2>
+<p>检测器依赖一组中间特征。它们不是最终告警，而是给价格、动量、盘口判断提供上下文。</p>
+<table>
+	<thead>
+			<tr>
+					<th>特征</th>
+					<th>含义</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>price_return_short_pct</code></td>
+					<td>最近 <code>price_window_seconds</code> 窗口内，从窗口首价到最新价的涨跌幅</td>
+			</tr>
+			<tr>
+					<td><code>realized_volatility_ratio</code></td>
+					<td>短窗收益波动相对基准窗口收益波动的比例</td>
+			</tr>
+			<tr>
+					<td><code>volume_burst_ratio</code></td>
+					<td>短窗成交量或成交额均值，相对基准窗口均值的比例</td>
+			</tr>
+			<tr>
+					<td><code>queue_imbalance_ratio</code></td>
+					<td>买卖盘总挂量失衡程度，公式为 <code>abs(total_bid - total_ask) / (total_bid + total_ask)</code></td>
+			</tr>
+			<tr>
+					<td><code>cancel_add_ratio</code></td>
+					<td>撤挂压力，公式为 <code>total_cancel / max(total_add + total_cancel, 1)</code></td>
+			</tr>
+			<tr>
+					<td><code>order_flow_imbalance</code></td>
+					<td>盘口净压力，买盘新增和卖盘撤单偏向向上，卖盘新增和买盘撤单偏向向下</td>
+			</tr>
+			<tr>
+					<td><code>spread_ratio</code></td>
+					<td>一档卖价减一档买价，再除以最新价</td>
+			</tr>
+			<tr>
+					<td><code>depth_collapse_ratio</code></td>
+					<td>当前盘口深度相对近期平均深度的收缩比例</td>
+			</tr>
+	</tbody>
+</table>
+<p>如果 tick 没有盘口字段，价格和动量仍会继续检测，但盘口相关特征会标记为 <code>missing_data</code>。</p>
+<h2 id="数学符号约定">数学符号约定</h2>
+<p>后面解释公式时，用下面这套符号：</p>
+<table>
+	<thead>
+			<tr>
+					<th>符号</th>
+					<th>含义</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>t_i</code></td>
+					<td>第 <code>i</code> 条已接受 tick 的事件时间</td>
+			</tr>
+			<tr>
+					<td><code>p_i</code></td>
+					<td>第 <code>i</code> 条已接受 tick 的最新价</td>
+			</tr>
+			<tr>
+					<td><code>v_i</code></td>
+					<td>第 <code>i</code> 条 tick 的成交量。如果没有成交量，则用成交额</td>
+			</tr>
+			<tr>
+					<td><code>B_i</code></td>
+					<td>第 <code>i</code> 条 tick 的买盘五档挂量合计</td>
+			</tr>
+			<tr>
+					<td><code>A_i</code></td>
+					<td>第 <code>i</code> 条 tick 的卖盘五档挂量合计</td>
+			</tr>
+			<tr>
+					<td><code>Delta t_i</code></td>
+					<td>相邻 tick 的时间差，代码里用 <code>max(t_i - t_{i-1}, 1秒)</code> 防止除以 0</td>
+			</tr>
+			<tr>
+					<td><code>return(a, b)</code></td>
+					<td>从价格 <code>a</code> 到价格 <code>b</code> 的涨跌幅，单位是百分比</td>
+			</tr>
+	</tbody>
+</table>
+<p>项目里的涨跌幅单位是“百分比点”，不是小数。也就是说，涨 <code>1%</code> 在计算里是 <code>1.0</code>，不是 <code>0.01</code>。</p>
+<p>基础涨跌幅函数是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>return(a, b) = (b - a) / a * 100
+</span></span></code></pre></div><p>如果 <code>a = 10.00</code>，<code>b = 10.12</code>，则：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>return(10.00, 10.12) = (10.12 - 10.00) / 10.00 * 100 = 1.20
+</span></span></code></pre></div><p>意思是涨了 <code>1.20%</code>。</p>
+<h2 id="价格跳变规则">价格跳变规则</h2>
+<p>价格跳变是最直接的一类异常。</p>
+<p>系统取某个标的最近 <code>price_window_seconds</code> 秒内的 tick，构成短窗口：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>W_price = {tick_i | latest_time - t_i &lt;= price_window_seconds}
+</span></span></code></pre></div><p>要求这个窗口里的 tick 数量至少达到：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>len(W_price) &gt;= min_ticks_short_window
+</span></span></code></pre></div><p>如果数量不够，说明短窗样本太薄，直接不判断价格跳变。</p>
+<p>设窗口第一条 tick 的价格为 <code>p_first</code>，最新 tick 的价格为 <code>p_latest</code>，则短窗涨跌幅为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>price_return_pct = return(p_first, p_latest)
+</span></span><span style="display:flex;"><span>                 = (p_latest - p_first) / p_first * 100
+</span></span></code></pre></div><p>当满足下面条件时生成 <code>price_jump</code> 事件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>abs(price_return_pct) &gt;= price_return_threshold_pct
+</span></span></code></pre></div><p>这里取绝对值，所以向上跳变和向下跳变都会被检测。</p>
+<p>方向由涨跌幅正负决定：</p>
+<ul>
+<li>大于 0：<code>up</code></li>
+<li>小于 0：<code>down</code></li>
+</ul>
+<p>严重程度由 <code>severity_thresholds</code> 中的价格阈值决定：</p>
+<table>
+	<thead>
+			<tr>
+					<th>等级</th>
+					<th>判断方式</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>warning</td>
+					<td>达到基础 <code>price_return_threshold_pct</code>，但未达到 high</td>
+			</tr>
+			<tr>
+					<td>high</td>
+					<td><code>abs(price_return_pct)</code> 达到 <code>severity_thresholds.high.price_return_pct</code></td>
+			</tr>
+			<tr>
+					<td>critical</td>
+					<td><code>abs(price_return_pct)</code> 达到 <code>severity_thresholds.critical.price_return_pct</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>价格跳变一旦被检测出来，默认就是可报告事件。也就是说，它不需要额外成交量或盘口确认。</p>
+<p>举个例子：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>price_window_seconds = 30
+</span></span><span style="display:flex;"><span>price_return_threshold_pct = 1.5
+</span></span><span style="display:flex;"><span>min_ticks_short_window = 3
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>30秒窗口内第一价 p_first = 10.00
+</span></span><span style="display:flex;"><span>最新价 p_latest = 10.18
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>price_return_pct = (10.18 - 10.00) / 10.00 * 100 = 1.80
+</span></span><span style="display:flex;"><span>abs(1.80) &gt;= 1.5
+</span></span></code></pre></div><p>这会触发一条向上的 <code>price_jump</code> 候选异常。</p>
+<h2 id="动量异常规则">动量异常规则</h2>
+<p>动量异常检测的是“短时间价格变化速度相对过去是否异常”。它不只看涨跌幅，而是把短窗速度和基准窗口内的逐 tick 速度做 robust z-score 比较。</p>
+<p>它解决的是这样一个问题：同样是 10 秒涨 <code>0.8%</code>，如果一只股票过去 3 分钟一直剧烈跳动，这不一定异常；但如果过去 3 分钟几乎横盘，这个加速度就很值得注意。</p>
+<h3 id="第一步取脉冲窗口">第一步：取脉冲窗口</h3>
+<p>系统取最近 <code>momentum_impulse_seconds</code> 秒作为脉冲窗口：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>W_impulse = {tick_i | latest_time - t_i &lt;= momentum_impulse_seconds}
+</span></span></code></pre></div><p>要求：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>len(W_impulse) &gt;= min_ticks_short_window
+</span></span></code></pre></div><p>否则不判断动量异常。</p>
+<p>设脉冲窗口第一条价格为 <code>p_impulse_start</code>，最新价为 <code>p_latest</code>：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>impulse_return_pct = return(p_impulse_start, p_latest)
+</span></span><span style="display:flex;"><span>                   = (p_latest - p_impulse_start) / p_impulse_start * 100
+</span></span></code></pre></div><p>窗口跨度秒数为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>seconds = max(latest_time - impulse_start_time, 1秒)
+</span></span></code></pre></div><p>脉冲速度为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>velocity_pct_per_second = impulse_return_pct / seconds
+</span></span></code></pre></div><p>这个速度单位是 <code>%/秒</code>。</p>
+<p>例如：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>p_impulse_start = 10.00
+</span></span><span style="display:flex;"><span>p_latest = 10.08
+</span></span><span style="display:flex;"><span>seconds = 8
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>impulse_return_pct = (10.08 - 10.00) / 10.00 * 100 = 0.80
+</span></span><span style="display:flex;"><span>velocity_pct_per_second = 0.80 / 8 = 0.100
+</span></span></code></pre></div><p>意思是最近 8 秒以平均 <code>0.100%/秒</code> 的速度上冲。</p>
+<h3 id="第二步真实位移门槛">第二步：真实位移门槛</h3>
+<p>在算 z-score 前，先用 <code>momentum_min_return_pct</code> 做硬过滤：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>abs(impulse_return_pct) &gt;= momentum_min_return_pct
+</span></span></code></pre></div><p>这个参数是防噪音的关键。比如最近 10 秒只涨了 <code>0.10%</code>，即使历史波动极低导致 z-score 看起来很高，也不会进入动量异常。</p>
+<p>换句话说，<code>momentum_min_return_pct</code> 回答的是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>这次短窗运动本身够不够大？
+</span></span></code></pre></div><p>而后面的 <code>momentum_z_threshold</code> 回答的是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>这次短窗运动相对近期基准够不够异常？
+</span></span></code></pre></div><p>两者必须同时看。只看 z-score，在横盘时容易被很小的价格跳动放大；只看涨跌幅，又看不出“相对最近是否突然加速”。</p>
+<h3 id="第三步构造基准速度样本">第三步：构造基准速度样本</h3>
+<p>系统取最近 <code>momentum_baseline_seconds</code> 秒作为基准窗口：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>W_baseline = {tick_i | latest_time - t_i &lt;= momentum_baseline_seconds}
+</span></span></code></pre></div><p>要求：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>len(W_baseline) &gt;= min_ticks_baseline_window
+</span></span></code></pre></div><p>然后对窗口里每一对相邻 tick 计算一个速度样本：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>r_i = return(p_{i-1}, p_i)
+</span></span><span style="display:flex;"><span>Delta t_i = max(t_i - t_{i-1}, 1秒)
+</span></span><span style="display:flex;"><span>baseline_velocity_i = r_i / Delta t_i
+</span></span></code></pre></div><p>于是得到一个速度样本序列：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>S = [baseline_velocity_1, baseline_velocity_2, ..., baseline_velocity_n]
+</span></span></code></pre></div><p>代码还会统计其中非零样本：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>S_nonzero = {x in S | abs(x) &gt; 1e-9}
+</span></span></code></pre></div><p>如果非零样本太少，说明最近行情太平，z-score 容易失真。</p>
+<h3 id="第四步低波动保护">第四步：低波动保护</h3>
+<p>低波动保护规则是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>如果 len(S_nonzero) &lt; momentum_min_nonzero_baseline_samples
+</span></span><span style="display:flex;"><span>并且 abs(impulse_return_pct) &lt; momentum_zero_mad_min_return_pct
+</span></span><span style="display:flex;"><span>则本次动量异常不成立
+</span></span></code></pre></div><p>这条规则的含义是：如果基准窗口里大部分 tick 都没怎么动，那么必须看到更大的真实涨跌幅，才允许继续往下判断。</p>
+<h3 id="第五步计算-robust-z-score">第五步：计算 robust z-score</h3>
+<p>普通 z-score 通常用均值和标准差：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>z = (value - mean) / std
+</span></span></code></pre></div><p>但 tick 速度很容易有尖刺，用均值和标准差会被极端值带偏。这里改用中位数和 MAD：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>median = median(S)
+</span></span><span style="display:flex;"><span>mad = median(abs(x - median) for x in S)
+</span></span><span style="display:flex;"><span>momentum_z = 0.6745 * (velocity_pct_per_second - median) / mad
+</span></span></code></pre></div><p>这里的 <code>MAD</code> 是 median absolute deviation，也就是“相对中位数的绝对偏差的中位数”。它比标准差更抗异常值。</p>
+<p><code>0.6745</code> 是一个尺度校正系数。在近似正态分布下：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>MAD ≈ 0.6745 * sigma
+</span></span></code></pre></div><p>所以：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>0.6745 * (value - median) / MAD
+</span></span></code></pre></div><p>可以把 MAD 尺度转换成类似普通 z-score 的尺度。</p>
+<p>如果 <code>mad == 0</code>，说明基准窗口的速度样本相对中位数没有有效离散度。系统会走特殊逻辑：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>zero_mad_min_abs_value = momentum_zero_mad_min_return_pct / seconds
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>如果 abs(velocity_pct_per_second - median) &gt;= zero_mad_min_abs_value
+</span></span><span style="display:flex;"><span>并且 velocity_pct_per_second != median
+</span></span><span style="display:flex;"><span>则 momentum_z = 99.0
+</span></span><span style="display:flex;"><span>否则 momentum_z = 0.0
+</span></span></code></pre></div><p>这里的 <code>99.0</code> 不是精确统计意义上的 99 个标准差，而是一个工程上的“极端异常”标记：基准完全不动，而当前短窗已经达到足够真实位移。</p>
+<h3 id="第六步动量异常触发">第六步：动量异常触发</h3>
+<p>最终，当满足下面条件时生成 <code>momentum_spike</code> 候选事件：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>abs(momentum_z) &gt;= momentum_z_threshold
+</span></span></code></pre></div><p>严重程度同样由 <code>severity_thresholds</code> 决定：</p>
+<table>
+	<thead>
+			<tr>
+					<th>等级</th>
+					<th>判断方式</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>warning</td>
+					<td>达到基础 <code>momentum_z_threshold</code>，但未达到 high</td>
+			</tr>
+			<tr>
+					<td>high</td>
+					<td><code>abs(momentum_z)</code> 达到 <code>severity_thresholds.high.momentum_z</code></td>
+			</tr>
+			<tr>
+					<td>critical</td>
+					<td><code>abs(momentum_z)</code> 达到 <code>severity_thresholds.critical.momentum_z</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>这里的“动量Z分数=8.53”可以理解为：当前短窗价格变化速度，比近期基准速度的典型波动大约偏离了 <code>8.53</code> 个 robust 尺度。</p>
+<p>一个可复算的简化例子：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>momentum_impulse_seconds = 10
+</span></span><span style="display:flex;"><span>momentum_min_return_pct = 0.45
+</span></span><span style="display:flex;"><span>momentum_z_threshold = 6.5
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>脉冲窗口：
+</span></span><span style="display:flex;"><span>p_impulse_start = 10.00
+</span></span><span style="display:flex;"><span>p_latest = 10.09
+</span></span><span style="display:flex;"><span>seconds = 9
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>impulse_return_pct = 0.90
+</span></span><span style="display:flex;"><span>velocity_pct_per_second = 0.90 / 9 = 0.1000
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>基准速度样本 S 的中位数 median = 0.0100
+</span></span><span style="display:flex;"><span>MAD = 0.0071
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>momentum_z = 0.6745 * (0.1000 - 0.0100) / 0.0071
+</span></span><span style="display:flex;"><span>           ≈ 8.55
+</span></span></code></pre></div><p>因为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>abs(impulse_return_pct) = 0.90 &gt;= 0.45
+</span></span><span style="display:flex;"><span>abs(momentum_z) = 8.55 &gt;= 6.5
+</span></span></code></pre></div><p>所以会生成一条动量异常候选。</p>
+<h2 id="盘口流动性异常规则">盘口流动性异常规则</h2>
+<p>盘口流动性异常关注的不是成交价本身，而是挂单结构是否出现持续压力。</p>
+<p>系统会从 tick 中提取买一到买五、卖一到卖五。没有盘口字段时，盘口检测器不可用，但不会影响价格和动量检测。</p>
+<h3 id="第一步计算五档总量">第一步：计算五档总量</h3>
+<p>对每条 tick，先把五档买盘和五档卖盘数量分别加总：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>B_i = bid_qty_1 + bid_qty_2 + bid_qty_3 + bid_qty_4 + bid_qty_5
+</span></span><span style="display:flex;"><span>A_i = ask_qty_1 + ask_qty_2 + ask_qty_3 + ask_qty_4 + ask_qty_5
+</span></span></code></pre></div><p><code>B_i</code> 越大，代表买盘排队量越厚；<code>A_i</code> 越大，代表卖盘排队量越厚。</p>
+<h3 id="第二步计算挂单变化">第二步：计算挂单变化</h3>
+<p>系统会和上一条有盘口的 tick 比较，估算买卖盘总挂量的增加和减少：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>bid_diff = B_i - B_{i-1}
+</span></span><span style="display:flex;"><span>ask_diff = A_i - A_{i-1}
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>bid_added = max(bid_diff, 0)
+</span></span><span style="display:flex;"><span>bid_cancelled = max(-bid_diff, 0)
+</span></span><span style="display:flex;"><span>ask_added = max(ask_diff, 0)
+</span></span><span style="display:flex;"><span>ask_cancelled = max(-ask_diff, 0)
+</span></span></code></pre></div><p>然后合并成总新增和总撤减：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>total_add = bid_added + ask_added
+</span></span><span style="display:flex;"><span>total_cancel = bid_cancelled + ask_cancelled
+</span></span></code></pre></div><p>这里不是精确逐笔委托还原，而是用五档总量变化做近似压力指标。它能捕捉盘口量突然消失、突然堆积、单侧明显倾斜等现象。</p>
+<h3 id="第三步撤挂压力">第三步：撤挂压力</h3>
+<p>撤挂压力用 <code>cancel_add_ratio</code> 表示：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>cancel_add_ratio = total_cancel / max(total_add + total_cancel, 1)
+</span></span></code></pre></div><p>这个值在 <code>0</code> 到 <code>1</code> 附近：</p>
+<ul>
+<li>接近 <code>0</code>：主要是挂单增加。</li>
+<li>接近 <code>1</code>：主要是挂单减少或撤单压力。</li>
+<li>中间值：新增和撤减混合。</li>
+</ul>
+<p>代码里的飞书展示会乘以 <code>100</code>，例如 <code>0.65</code> 会显示成 <code>65.00%</code>。</p>
+<h3 id="第四步买卖盘失衡">第四步：买卖盘失衡</h3>
+<p>买卖盘失衡用 <code>queue_imbalance_ratio</code> 表示：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>queue_imbalance_ratio = abs(B_i - A_i) / (B_i + A_i)
+</span></span></code></pre></div><p>它也大致在 <code>0</code> 到 <code>1</code> 之间：</p>
+<ul>
+<li>接近 <code>0</code>：买卖盘总量比较均衡。</li>
+<li>越接近 <code>1</code>：一侧挂量远大于另一侧。</li>
+</ul>
+<p>这个指标只看失衡程度，不直接表示方向。方向另外用总买盘和总卖盘比较：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>如果 B_i &gt;= A_i，则方向为 up
+</span></span><span style="display:flex;"><span>否则方向为 down
+</span></span></code></pre></div><h3 id="第五步盘口净压力">第五步：盘口净压力</h3>
+<p>告警正文里还会带一个 <code>order_flow_imbalance</code>，它的公式是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>order_flow_imbalance =
+</span></span><span style="display:flex;"><span>    (bid_added + ask_cancelled)
+</span></span><span style="display:flex;"><span>  - (ask_added + bid_cancelled)
+</span></span></code></pre></div><p>可以粗略理解为：</p>
+<ul>
+<li><code>bid_added</code>：买盘增强，偏向向上。</li>
+<li><code>ask_cancelled</code>：卖盘撤退，偏向向上。</li>
+<li><code>ask_added</code>：卖盘增强，偏向向下。</li>
+<li><code>bid_cancelled</code>：买盘撤退，偏向向下。</li>
+</ul>
+<p>所以这个值为正时，盘口净压力偏向上；为负时，盘口净压力偏向下。</p>
+<h3 id="第六步盘口信号命中">第六步：盘口信号命中</h3>
+<p>当满足任一条件时，认为当前 tick 出现盘口信号：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>cancel_add_ratio &gt;= orderbook_cancel_ratio_threshold
+</span></span><span style="display:flex;"><span>或
+</span></span><span style="display:flex;"><span>queue_imbalance_ratio &gt;= orderbook_imbalance_ratio_threshold
+</span></span></code></pre></div><p>但单个 tick 的盘口变化很容易抖动，所以系统要求连续命中：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>连续命中次数 &gt;= orderbook_min_consecutive_ticks
+</span></span></code></pre></div><p>只要某条 tick 没命中盘口信号，连续计数就会清零。这个设计是为了过滤单条 tick 的盘口闪动。</p>
+<p>达到连续次数后生成 <code>orderbook_liquidity</code> 事件。方向由买卖盘总量决定：</p>
+<ul>
+<li><code>total_bid_quantity &gt;= total_ask_quantity</code>：<code>up</code></li>
+<li>否则：<code>down</code></li>
+</ul>
+<p>严重程度由撤挂压力和买卖盘失衡两个维度共同决定：</p>
+<table>
+	<thead>
+			<tr>
+					<th>等级</th>
+					<th>判断方式</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>warning</td>
+					<td>达到基础盘口阈值，但未达到 high</td>
+			</tr>
+			<tr>
+					<td>high</td>
+					<td><code>cancel_add_ratio</code> 或 <code>queue_imbalance_ratio</code> 达到 high 对应阈值</td>
+			</tr>
+			<tr>
+					<td>critical</td>
+					<td><code>cancel_add_ratio</code> 或 <code>queue_imbalance_ratio</code> 达到 critical 对应阈值</td>
+			</tr>
+	</tbody>
+</table>
+<p>举个例子：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>orderbook_cancel_ratio_threshold = 0.65
+</span></span><span style="display:flex;"><span>orderbook_imbalance_ratio_threshold = 0.92
+</span></span><span style="display:flex;"><span>orderbook_min_consecutive_ticks = 3
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>第1条：cancel_add_ratio = 0.70，queue_imbalance_ratio = 0.50，命中，连续计数=1
+</span></span><span style="display:flex;"><span>第2条：cancel_add_ratio = 0.68，queue_imbalance_ratio = 0.55，命中，连续计数=2
+</span></span><span style="display:flex;"><span>第3条：cancel_add_ratio = 0.72，queue_imbalance_ratio = 0.58，命中，连续计数=3
+</span></span></code></pre></div><p>第三条 tick 才会生成盘口流动性异常候选。</p>
+<h3 id="成交活跃度公式">成交活跃度公式</h3>
+<p>盘口和动量告警都可能用到成交活跃度确认，也就是 <code>volume_burst_ratio</code>。</p>
+<p>系统先为每条 tick 取活动量：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>activity_i = volume_i if volume_i &gt; 0 else turnover_i
+</span></span></code></pre></div><p>然后计算：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>short_activity_mean = mean(activity_i in price short window)
+</span></span><span style="display:flex;"><span>baseline_activity_mean = mean(activity_i in momentum baseline window)
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>volume_burst_ratio = short_activity_mean / max(baseline_activity_mean, 1)
+</span></span></code></pre></div><p>如果 <code>volume_burst_ratio = 2.5</code>，意思是短窗成交量或成交额均值大约是基准窗口均值的 <code>2.5</code> 倍。</p>
+<h2 id="候选异常如何变成可发送告警">候选异常如何变成可发送告警</h2>
+<p>检测器产出的事件还不是飞书消息。它们会先经过 reportable 过滤。</p>
+<h3 id="价格跳变">价格跳变</h3>
+<p><code>price_jump</code> 永远可报告。</p>
+<p>它是项目里最高优先级的直接信号：只要短窗涨跌幅达到阈值，就会进入告警聚合流程。</p>
+<h3 id="动量异常">动量异常</h3>
+<p><code>momentum_spike</code> 需要额外确认，满足任一条件即可报告：</p>
+<table>
+	<thead>
+			<tr>
+					<th>条件</th>
+					<th>含义</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>abs(impulse_return_pct) &gt;= momentum_notify_min_return_pct</code></td>
+					<td>脉冲窗口实际涨跌幅足够大</td>
+			</tr>
+			<tr>
+					<td><code>volume_burst_ratio &gt;= momentum_notify_volume_burst_ratio</code></td>
+					<td>成交量或成交额明显放大</td>
+			</tr>
+			<tr>
+					<td>盘口压力 + 最低成交活跃度</td>
+					<td><code>queue_imbalance_ratio &gt;= momentum_notify_orderbook_imbalance_ratio</code> 或 <code>cancel_add_ratio &gt;= momentum_notify_cancel_add_ratio</code>，同时 <code>volume_burst_ratio &gt;= momentum_notify_orderbook_min_volume_burst_ratio</code></td>
+			</tr>
+			<tr>
+					<td>同组存在价格跳变</td>
+					<td>同一个 tick 批次里有 <code>price_jump</code> 作为兄弟事件</td>
+			</tr>
+	</tbody>
+</table>
+<p>这个设计的意思是：动量 Z 分数可以先捕捉异常加速度，但要发给人，最好再有真实位移、成交活跃或盘口压力做确认。</p>
+<p>用公式写，就是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>reportable(momentum) =
+</span></span><span style="display:flex;"><span>    abs(impulse_return_pct) &gt;= momentum_notify_min_return_pct
+</span></span><span style="display:flex;"><span> or volume_burst_ratio &gt;= momentum_notify_volume_burst_ratio
+</span></span><span style="display:flex;"><span> or (
+</span></span><span style="display:flex;"><span>      (
+</span></span><span style="display:flex;"><span>        queue_imbalance_ratio &gt;= momentum_notify_orderbook_imbalance_ratio
+</span></span><span style="display:flex;"><span>        or cancel_add_ratio &gt;= momentum_notify_cancel_add_ratio
+</span></span><span style="display:flex;"><span>      )
+</span></span><span style="display:flex;"><span>      and volume_burst_ratio &gt;= momentum_notify_orderbook_min_volume_burst_ratio
+</span></span><span style="display:flex;"><span>    )
+</span></span><span style="display:flex;"><span> or same_batch_has_price_jump
+</span></span></code></pre></div><p>这里要注意两组动量参数的区别：</p>
+<table>
+	<thead>
+			<tr>
+					<th>参数</th>
+					<th>所在阶段</th>
+					<th>含义</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>momentum_min_return_pct</code></td>
+					<td>检测阶段</td>
+					<td>真实涨跌幅不够时，不生成动量候选</td>
+			</tr>
+			<tr>
+					<td><code>momentum_notify_min_return_pct</code></td>
+					<td>告警阶段</td>
+					<td>候选已经生成后，真实涨跌幅够大则允许直接发送</td>
+			</tr>
+	</tbody>
+</table>
+<p>前者决定“算不算异常候选”，后者决定“要不要打扰人”。</p>
+<h3 id="盘口流动性异常">盘口流动性异常</h3>
+<p><code>orderbook_liquidity</code> 单独发通知更谨慎，必须先达到最低等级：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>event.severity &gt;= orderbook_standalone_min_severity
+</span></span></code></pre></div><p>达到最低等级后，还需要满足任一条件：</p>
+<table>
+	<thead>
+			<tr>
+					<th>条件</th>
+					<th>含义</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>同组存在价格跳变</td>
+					<td>盘口异常和价格跳变共振</td>
+			</tr>
+			<tr>
+					<td>价格确认 + 成交确认</td>
+					<td><code>abs(price_return_short_pct) &gt;= orderbook_notify_min_return_pct</code> 且 <code>volume_burst_ratio &gt;= orderbook_notify_volume_burst_ratio</code></td>
+			</tr>
+	</tbody>
+</table>
+<p>所以盘口异常可以被记录得比较细，但不会轻易单独推送。它更适合作为价格或动量信号的增强证据。</p>
+<p>用公式写，就是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>reportable(orderbook) =
+</span></span><span style="display:flex;"><span>    severity &gt;= orderbook_standalone_min_severity
+</span></span><span style="display:flex;"><span> and (
+</span></span><span style="display:flex;"><span>      same_batch_has_price_jump
+</span></span><span style="display:flex;"><span>      or (
+</span></span><span style="display:flex;"><span>        abs(price_return_short_pct) &gt;= orderbook_notify_min_return_pct
+</span></span><span style="display:flex;"><span>        and volume_burst_ratio &gt;= orderbook_notify_volume_burst_ratio
+</span></span><span style="display:flex;"><span>      )
+</span></span><span style="display:flex;"><span>    )
+</span></span></code></pre></div><h2 id="告警聚合规则">告警聚合规则</h2>
+<p>通过 reportable 过滤后，事件会进入同一标的的聚合窗口。</p>
+<p>聚合窗口由下面参数控制：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-yaml" data-lang="yaml"><span style="display:flex;"><span><span style="color:#f92672">alert_aggregation_window_seconds</span>: <span style="color:#ae81ff">30</span>
+</span></span></code></pre></div><p>在这个窗口内，同一标的可能连续触发价格跳变、动量异常、盘口异常。系统不会每个事件都发一条，而是合并成一条飞书消息。</p>
+<p>合并时，同一异常类型只保留一个代表事件：</p>
+<ol>
+<li>优先保留严重程度更高的事件。</li>
+<li>严重程度相同时，保留触发时间更新的事件。</li>
+<li>不同异常类型按触发时间排序放入同一条消息。</li>
+</ol>
+<p>比如同一只股票 30 秒内先出现动量异常，后出现价格跳变和盘口异常，最终可能合并成：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>类型：动量异常 + 价格跳变 + 盘口流动性异常
+</span></span><span style="display:flex;"><span>方向：向上
+</span></span><span style="display:flex;"><span>等级：高
+</span></span></code></pre></div><p>这样比连续收到三条消息更适合盘中查看。</p>
+<h2 id="冷却和反向震荡保护">冷却和反向震荡保护</h2>
+<p>聚合后的告警还会经过 suppression 规则。</p>
+<p>第一类是重复冷却：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>cooldown_seconds
+</span></span></code></pre></div><p>同一标的、同一主异常类型、同一方向，在冷却期内再次出现时，如果新事件严重程度不高于上一次，就会被抑制。</p>
+<p>第二类是反向震荡保护：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>opposite_direction_guard_seconds
+</span></span></code></pre></div><p>如果刚发过向上告警，很短时间内又出现同一主异常类型的向下告警，系统会认为可能是来回抽动，先抑制这条反向消息。</p>
+<p>注意，冷却键会以聚合后的主事件为准。主事件由最高严重程度决定，多个事件同级时取实现里的排序结果。聚合组内其他事件会共享这个 suppression key。</p>
+<h2 id="飞书消息格式">飞书消息格式</h2>
+<p>最终发送的是飞书 <code>im/v1/messages</code> 的 <code>post</code> 消息。</p>
+<p>消息标题格式：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>A股异动告警 | {symbol name} | {severity}
+</span></span></code></pre></div><p>正文包含：</p>
+<table>
+	<thead>
+			<tr>
+					<th>字段</th>
+					<th>示例</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>类型</td>
+					<td><code>价格跳变 + 动量异常</code></td>
+			</tr>
+			<tr>
+					<td>方向</td>
+					<td><code>向上</code> 或 <code>向下</code></td>
+			</tr>
+			<tr>
+					<td>触发时间</td>
+					<td>tick 的事件时间</td>
+			</tr>
+			<tr>
+					<td>最新价</td>
+					<td>触发 tick 的最新价</td>
+			</tr>
+			<tr>
+					<td>当前涨跌幅</td>
+					<td>如果行情字段或昨收、开盘价可用，则补充</td>
+			</tr>
+			<tr>
+					<td>等级</td>
+					<td>提醒、高、严重</td>
+			</tr>
+			<tr>
+					<td>每类异常测量值</td>
+					<td>价格涨跌幅、动量Z分数、脉冲涨跌幅、撤挂压力、买卖盘失衡等</td>
+			</tr>
+			<tr>
+					<td>原因</td>
+					<td>按异常类型生成的中文解释</td>
+			</tr>
+	</tbody>
+</table>
+<p>飞书鉴权使用 <code>tenant_access_token</code>。发送规则包括：</p>
+<ul>
+<li>token 会缓存到接近过期前，提前 <code>token_refresh_margin_seconds</code> 秒刷新。</li>
+<li>消息发送最多尝试 <code>max_attempts</code> 次。</li>
+<li>遇到 token 类失败会强制刷新 token 后重试。</li>
+<li>4xx 错误或达到最大次数后停止。</li>
+<li>每次发送结果都会写入 <code>notification.jsonl</code> 审计日志。</li>
+</ul>
+<h2 id="关键参数速查">关键参数速查</h2>
+<table>
+	<thead>
+			<tr>
+					<th>参数</th>
+					<th>作用</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td><code>price_window_seconds</code></td>
+					<td>价格跳变短窗长度</td>
+			</tr>
+			<tr>
+					<td><code>price_return_threshold_pct</code></td>
+					<td>价格跳变基础阈值</td>
+			</tr>
+			<tr>
+					<td><code>momentum_impulse_seconds</code></td>
+					<td>动量脉冲窗口长度</td>
+			</tr>
+			<tr>
+					<td><code>momentum_baseline_seconds</code></td>
+					<td>动量基准窗口长度</td>
+			</tr>
+			<tr>
+					<td><code>momentum_z_threshold</code></td>
+					<td>动量 Z 分数基础阈值</td>
+			</tr>
+			<tr>
+					<td><code>momentum_min_return_pct</code></td>
+					<td>动量检测前置真实涨跌幅门槛</td>
+			</tr>
+			<tr>
+					<td><code>momentum_min_nonzero_baseline_samples</code></td>
+					<td>动量基准窗口中最少非零速度样本数</td>
+			</tr>
+			<tr>
+					<td><code>momentum_zero_mad_min_return_pct</code></td>
+					<td>MAD 为 0 或低波动场景下的更严格位移门槛</td>
+			</tr>
+			<tr>
+					<td><code>momentum_notify_min_return_pct</code></td>
+					<td>动量告警可直接报告的真实涨跌幅门槛</td>
+			</tr>
+			<tr>
+					<td><code>momentum_notify_volume_burst_ratio</code></td>
+					<td>动量告警成交活跃度确认阈值</td>
+			</tr>
+			<tr>
+					<td><code>orderbook_min_consecutive_ticks</code></td>
+					<td>盘口异常连续命中 tick 数</td>
+			</tr>
+			<tr>
+					<td><code>orderbook_cancel_ratio_threshold</code></td>
+					<td>撤挂压力检测阈值</td>
+			</tr>
+			<tr>
+					<td><code>orderbook_imbalance_ratio_threshold</code></td>
+					<td>买卖盘失衡检测阈值</td>
+			</tr>
+			<tr>
+					<td><code>orderbook_standalone_min_severity</code></td>
+					<td>盘口异常单独报告的最低等级</td>
+			</tr>
+			<tr>
+					<td><code>orderbook_notify_min_return_pct</code></td>
+					<td>盘口告警需要的价格确认阈值</td>
+			</tr>
+			<tr>
+					<td><code>orderbook_notify_volume_burst_ratio</code></td>
+					<td>盘口告警需要的成交确认阈值</td>
+			</tr>
+			<tr>
+					<td><code>alert_aggregation_window_seconds</code></td>
+					<td>同一标的告警合并窗口</td>
+			</tr>
+			<tr>
+					<td><code>cooldown_seconds</code></td>
+					<td>同方向重复告警冷却时间</td>
+			</tr>
+			<tr>
+					<td><code>opposite_direction_guard_seconds</code></td>
+					<td>反向震荡保护时间</td>
+			</tr>
+	</tbody>
+</table>
+<h2 id="我的理解">我的理解</h2>
+<p>这套规则的核心取向是：检测可以灵敏，通知必须克制。</p>
+<p>价格跳变是最直接的盘面事实，所以默认可报告；动量异常容易在低波动环境里被放大，所以加了真实涨跌幅、非零样本、成交和盘口确认；盘口异常最容易抖动，所以要求连续命中，并且单独发通知时还要有价格和成交配合。</p>
+<p>这样的结构适合盘中监控：先把候选异常完整记下来，方便事后回放校准；同时只把更有上下文的组合信号推给人，减少盯盘时的噪音。</p>
+<h2 id="附录动量-z-分数计算例子">附录：动量 Z 分数计算例子</h2>
+<p>假设当前规则配置是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>momentum_impulse_seconds = 10
+</span></span><span style="display:flex;"><span>momentum_min_return_pct = 0.45
+</span></span><span style="display:flex;"><span>momentum_z_threshold = 6.5
+</span></span></code></pre></div><p>最近 10 秒内的脉冲窗口数据是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>起始价 = 10.00
+</span></span><span style="display:flex;"><span>最新价 = 10.09
+</span></span><span style="display:flex;"><span>实际用时 = 9 秒
+</span></span></code></pre></div><p>先算脉冲窗口真实涨跌幅：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>impulse_return_pct = (10.09 - 10.00) / 10.00 * 100
+</span></span><span style="display:flex;"><span>                   = 0.90%
+</span></span></code></pre></div><p>再换算成短窗价格变化速度：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>velocity = 0.90 / 9
+</span></span><span style="display:flex;"><span>         = 0.1000 %/秒
+</span></span></code></pre></div><p>假设过去基准窗口里，相邻 tick 的历史速度样本是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[0.006, 0.008, 0.010, 0.011, 0.012, 0.014]
+</span></span></code></pre></div><p>这些数字的单位同样是 <code>%/秒</code>。先算中位数：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>median = (0.010 + 0.011) / 2
+</span></span><span style="display:flex;"><span>       = 0.0105
+</span></span></code></pre></div><p>然后计算每个样本相对中位数的绝对偏差：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>|0.006 - 0.0105| = 0.0045
+</span></span><span style="display:flex;"><span>|0.008 - 0.0105| = 0.0025
+</span></span><span style="display:flex;"><span>|0.010 - 0.0105| = 0.0005
+</span></span><span style="display:flex;"><span>|0.011 - 0.0105| = 0.0005
+</span></span><span style="display:flex;"><span>|0.012 - 0.0105| = 0.0015
+</span></span><span style="display:flex;"><span>|0.014 - 0.0105| = 0.0035
+</span></span></code></pre></div><p>排序后得到：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>[0.0005, 0.0005, 0.0015, 0.0025, 0.0035, 0.0045]
+</span></span></code></pre></div><p>MAD 是这些绝对偏差的中位数：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>MAD = (0.0015 + 0.0025) / 2
+</span></span><span style="display:flex;"><span>    = 0.0020
+</span></span></code></pre></div><p>最后代入 robust z-score 公式：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>momentum_z = 0.6745 * (velocity - median) / MAD
+</span></span><span style="display:flex;"><span>           = 0.6745 * (0.1000 - 0.0105) / 0.0020
+</span></span><span style="display:flex;"><span>           = 0.6745 * 44.75
+</span></span><span style="display:flex;"><span>           = 30.18
+</span></span></code></pre></div><p>所以这一次的结果是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>动量 Z 分数 = 30.18
+</span></span></code></pre></div><p>因为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>impulse_return_pct = 0.90% &gt;= momentum_min_return_pct 0.45%
+</span></span><span style="display:flex;"><span>momentum_z = 30.18 &gt;= momentum_z_threshold 6.5
+</span></span></code></pre></div><p>因此它会被识别为一条动量异常候选。后续是否发送飞书，还要继续看 <code>momentum_notify_min_return_pct</code>、<code>volume_burst_ratio</code>、盘口压力或同组价格跳变这些告警确认条件。</p>
+  </div>
+  
+
+<div class="navigation navigation-single">
+    
+    <a href="/posts/quant-intrusion-scan-20260519/" class="navigation-prev">
+      <i aria-hidden="true" class="fa fa-chevron-left"></i>
+      <span class="navigation-tittle">量化介入股票扫描结果：2026-05-19</span>
+    </a>
+    
+    
+</div>
+
+
+  
+
+  
+
+
+</article>
+
+
+  </div>
+<style>
+  .content.container {
+        width: 100%;
+        max-width: none;
+        border: none;
+        display: block;
+        box-sizing: border-box;
+        margin-left: 0;
+        margin-right: 0;
+  }
+
+   
+  @media (max-width: 767px) {
+    body:not(.type-iframe) .content.container {
+      height: calc(100vh - var(--sidebar-height, 49px));
+      overflow-y: auto;
+    }
+  }
+
+   
+  body.type-iframe .content.container {
+        height: calc(100vh - var(--sidebar-height, 49px));
+        overflow-y: auto;
+  }
+
+  body:not(.type-iframe) .content.container {
+        padding-left: max(1.5rem, calc((100% - var(--content-max-width, 38rem)) / 2));
+        padding-right: max(1.5rem, calc((100% - var(--content-max-width, 38rem)) / 2));
+  }
+</style>
+<script>
+    (function () {
+        var content = document.querySelector('.content.container');
+        if (!content) return;
+
+        
+        function needsContentScroll() {
+            return document.body.classList.contains('type-iframe') ||
+                   window.matchMedia('(max-width: 767px)').matches;
+        }
+
+        
+        
+        
+        function updateHeight() {
+            if (needsContentScroll()) {
+                var available = window.innerHeight - content.getBoundingClientRect().top;
+                content.style.height = Math.max(0, available) + 'px';
+            } else {
+                content.style.height = '';
+            }
+        }
+
+        
+        
+        
+        function scrollToHash() {
+            if (!needsContentScroll() || !location.hash || location.hash === '#') return;
+            var id = location.hash.slice(1);
+            try { id = decodeURIComponent(id); } catch (e) {}
+            var el = document.getElementById(id);
+            if (el) try { el.scrollIntoView({ block: 'start', inline: 'nearest' }); } catch (e) { el.scrollIntoView(true); }
+        }
+
+        function init() { updateHeight(); scrollToHash(); }
+
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init, { once: true });
+        } else {
+            init();
+        }
+        
+        window.addEventListener('load', init);
+        
+        window.addEventListener('pageshow', init);
+        
+        window.addEventListener('hashchange', scrollToHash);
+
+        
+        var resizeTimer;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(updateHeight, 120);
+        });
+
+        
+        
+        var menuToggle = document.getElementById('menuToggle');
+        if (menuToggle) {
+            menuToggle.addEventListener('change', function () {
+                updateHeight();
+                setTimeout(updateHeight, 250);
+            });
+        }
+    })();
+</script>
+  
+    
+
+
+
+<script defer src="/js/all.js" crossorigin="anonymous"></script>
+
+    
+    
+    <script src="/js/highlight.min.js"></script>
+    <script src="/js/languages/dos.min.js"></script>
+        
+    <script type="text/javascript">
+        
+        hljs.highlightAll();
+    </script>
+    
+
+<style>
+    .code-block-wrapper {
+        position: relative;
+    }
+    .copy-code-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.3s, background 0.3s;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .copy-code-button svg {
+        width: 16px;
+        height: 16px;
+        fill: #fff;
+        transition: fill 0.3s;
+    }
+    .code-block-wrapper:hover .copy-code-button {
+        opacity: 1;
+    }
+    .copy-code-button:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+    .copy-code-button.copied {
+        background: rgba(46, 160, 67, 0.8);
+        border-color: rgba(46, 160, 67, 1);
+    }
+    .copy-code-button.copied svg {
+        fill: #fff;
+    }
+</style>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        document.querySelectorAll('pre code').forEach(function(codeBlock) {
+            var pre = codeBlock.parentNode;
+            
+            
+            if (pre.parentNode.classList.contains('code-block-wrapper')) {
+                return;
+            }
+            
+            
+            var wrapper = document.createElement('div');
+            wrapper.className = 'code-block-wrapper';
+            pre.parentNode.insertBefore(wrapper, pre);
+            wrapper.appendChild(pre);
+            
+            
+            var button = document.createElement('button');
+            button.className = 'copy-code-button';
+            button.innerHTML = '<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path></svg>';
+            button.setAttribute('aria-label', '复制代码');
+            button.setAttribute('title', '复制代码');
+            
+            var copyIcon = '<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path></svg>';
+            var checkIcon = '<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>';
+            
+            
+            button.addEventListener('click', function() {
+                var code = codeBlock.textContent;
+                navigator.clipboard.writeText(code).then(function() {
+                    button.innerHTML = checkIcon;
+                    button.classList.add('copied');
+                    button.setAttribute('aria-label', '已复制');
+                    button.setAttribute('title', '已复制');
+                    setTimeout(function() {
+                        button.innerHTML = copyIcon;
+                        button.classList.remove('copied');
+                        button.setAttribute('aria-label', '复制代码');
+                        button.setAttribute('title', '复制代码');
+                    }, 2000);
+                }).catch(function(err) {
+                    console.error('复制失败:', err);
+                });
+            });
+            
+            wrapper.appendChild(button);
+        });
+    });
+</script>
+
+
+
+
+    
+
+
+
+</body>
+
+</html>
