@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8" standalone="yes"?>
+<rss version="2.0" xmlns:atom="http://www.w3.org/2005/Atom">
+	<channel>
+		<title>技术指标 on 量化日记</title>
+		<link>/tags/%E6%8A%80%E6%9C%AF%E6%8C%87%E6%A0%87/</link>
+		<description>Recent content in 技术指标 on 量化日记</description>
+		<generator>Hugo</generator>
+		<language>zh-CN</language>
+		
+		
+		
+		
+			<lastBuildDate>Tue, 07 Jul 2026 10:00:00 +0800</lastBuildDate>
+		
+			<atom:link href="/tags/%E6%8A%80%E6%9C%AF%E6%8C%87%E6%A0%87/index.xml" rel="self" type="application/rss+xml" />
+			<item>
+				<title>MACD 指标详解：计算方式、使用方法与配合指标</title>
+				<link>/posts/macd-indicator-guide/</link>
+				<pubDate>Tue, 07 Jul 2026 10:00:00 +0800</pubDate>
+				<guid>/posts/macd-indicator-guide/</guid>
+				<description>&lt;p&gt;MACD（Moving Average Convergence Divergence，指数平滑异同移动平均线）是技术分析中最经典的趋势跟踪指标之一，由 Gerald Appel 于 1979 年提出。它通过两条指数移动平均线的差值来识别价格趋势的方向、强度和转折点。这篇文章整理 MACD 的完整计算过程、核心信号的使用方法，以及实战中建议配合哪些指标来提高信号质量。&lt;/p&gt;</description>
+			</item>
+	</channel>
+</rss>

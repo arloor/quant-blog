@@ -1,0 +1,1041 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+    
+
+
+    <head>
+    <link href="https://gmpg.org/xfn/11" rel="profile">
+    
+    <link rel="canonical" href="/posts/macd-indicator-guide/">
+    
+    <meta charset="utf-8">
+<meta http-equiv="X-UA-Compatible" content="IE=edge">
+<!-- Enable responsiveness on mobile devices -->
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
+<meta name="generator" content="Hugo 0.164.0">
+
+    
+    
+    
+
+<title>MACD 指标详解：计算方式、使用方法与配合指标 • 量化日记</title>
+<meta name="description" content="量化研究、交易复盘与系统记录">
+<meta name="keywords" content="量化, 交易, 股票, 策略, 回测">
+
+	<meta name="twitter:card" content="summary">
+	<meta name="twitter:title" content="MACD 指标详解：计算方式、使用方法与配合指标">
+	<meta name="twitter:description" content="系统整理 MACD 指标的数学计算过程、核心信号用法（金叉死叉、零轴、背离、柱状图），以及实战中应配合使用的辅助指标。">
+			<meta name="twitter:site" content="@njulgh">
+
+<meta property="og:url" content="/posts/macd-indicator-guide/">
+	<meta property="og:site_name" content="量化日记">
+	<meta property="og:title" content="MACD 指标详解：计算方式、使用方法与配合指标">
+	<meta property="og:description" content="系统整理 MACD 指标的数学计算过程、核心信号用法（金叉死叉、零轴、背离、柱状图），以及实战中应配合使用的辅助指标。">
+	<meta property="og:locale" content="zh_CN">
+	<meta property="og:type" content="article">
+		<meta property="article:section" content="posts">
+		<meta property="article:published_time" content="2026-07-07T10:00:00+08:00">
+		<meta property="article:modified_time" content="2026-07-07T10:00:00+08:00">
+		<meta property="article:tag" content="A股">
+		<meta property="article:tag" content="技术指标">
+		<meta property="article:tag" content="MACD">
+		<meta property="article:tag" content="量化交易">
+
+
+    
+
+
+
+
+
+<link rel="stylesheet" href="/styles/atom-one-dark.min.css">
+
+
+
+
+
+
+
+
+<link rel="stylesheet" href="/scss/hyde-hyde.debf1b963c1830f6b9b96ee48c2b4a22c31c7c3885a87bed290c0e198fc6a08d.css" integrity="sha256-3r8bljwYMPa5uW7kjCtKIsMcfDiFqHvtKQwOGY/GoI0=">
+
+
+<link rel="stylesheet" href="/scss/print.2744dcbf8a0b2e74f8a50e4b34e5f441be7cf93cc7de27029121c6a09f9e77bc.css" integrity="sha256-J0Tcv4oLLnT4pQ5LNOX0Qb58&#43;TzH3icCkSHGoJ&#43;ed7w=" media="print">
+
+
+
+
+<link rel="stylesheet" href="/scss/hugo-toc.6b7222b4ddd3cebd47d144a2e37ade6cbbb64f47e31d8feac655896156ade206.css" integrity="sha256-a3IitN3Tzr1H0USi43rebLu2T0fjHY/qxlWJYVat4gY=">
+
+
+
+    <!-- HTML5 shim and Respond.js for IE8 support of HTML5 elements and media queries -->
+    <!--[if lt IE 9]>
+    <script src="https://oss.maxcdn.com/html5shiv/3.7.3/html5shiv.min.js"></script>
+    <script src="https://oss.maxcdn.com/respond/1.4.2/respond.min.js"></script>
+    <![endif]-->
+    <!-- Icons -->
+    <link rel="apple-touch-icon-precomposed" sizes="144x144" href="/apple-touch-icon-144-precomposed.png">
+    <link rel="shortcut icon" href="/favicon.png">
+    
+    
+
+</head>
+
+
+
+<body class="  ">
+  
+<div class="sidebar">
+  <div class="container ">
+    <div class="sidebar-about">
+      <span class="site__title">
+        <a href="/">
+          
+          量化日记
+          
+        </a>
+      </span>
+      <a href="/">
+        
+        
+        <div class="author-image">
+          <img src="/img/head.jpeg" alt="Author Image" class="img--circle img--headshot element--center">
+        </div>
+        
+        
+      </a>
+      
+      <p class="site__description">
+         量化研究、交易复盘与系统记录 
+      </p>
+    </div>
+    <div class="collapsible-menu">
+      <input type="checkbox" id="menuToggle">
+      <label for="menuToggle">量化日记</label>
+      <div class="menu-content menu-content--mobile">
+        <div class="show-in-small">
+          <a href="/">
+            
+            
+            <div class="author-image">
+              <img src="/img/head.jpeg" alt="Author Image"
+                class="img--circle img--headshot element--center">
+            </div>
+            
+            
+          </a>
+        </div>
+        <div>
+	<ul class="sidebar-nav">
+		 
+		 
+			 
+				<li>
+					<a href="/posts/">
+						<span>文章</span>
+					</a>
+				</li>
+			 
+		 
+			 
+				<li>
+					<a href="/tags/">
+						<span>分类</span>
+					</a>
+				</li>
+			 
+		 
+			 
+				<li>
+					<a href="/about/">
+						<span>关于</span>
+					</a>
+				</li>
+			 
+		
+	</ul>
+</div>
+
+        <section class="social">
+	
+	<a href="https://x.com/njulgh" rel="me" target="_blank"><i class="fa-brands fa-x-twitter fa-lg"></i></a>
+	
+	
+	
+	
+	
+	<a href="https://github.com/arloor" rel="me" target="_blank"><i class="fa-brands fa-github fa-lg"></i></a>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<a href="https://t.me/never_contact_me" rel="me" target="_blank"><i class="fa-brands fa-telegram fa-lg" aria-hidden="true"></i></a>
+	
+	
+	
+	
+	<a href="mailto:admin@arloor.com" rel="me" target="_blank"><i class="fa-solid fa-at fa-lg"></i></a>
+	
+	
+	
+	
+</section>
+      </div>
+    </div>
+    <div class="menu-content menu-content--desktop">
+      <div>
+	<ul class="sidebar-nav">
+		 
+		 
+			 
+				<li>
+					<a href="/posts/">
+						<span>文章</span>
+					</a>
+				</li>
+			 
+		 
+			 
+				<li>
+					<a href="/tags/">
+						<span>分类</span>
+					</a>
+				</li>
+			 
+		 
+			 
+				<li>
+					<a href="/about/">
+						<span>关于</span>
+					</a>
+				</li>
+			 
+		
+	</ul>
+</div>
+
+    </div>
+    <div class="social-wrap social-wrap--desktop">
+      <section class="social">
+	
+	<a href="https://x.com/njulgh" rel="me" target="_blank"><i class="fa-brands fa-x-twitter fa-lg"></i></a>
+	
+	
+	
+	
+	
+	<a href="https://github.com/arloor" rel="me" target="_blank"><i class="fa-brands fa-github fa-lg"></i></a>
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	
+	<a href="https://t.me/never_contact_me" rel="me" target="_blank"><i class="fa-brands fa-telegram fa-lg" aria-hidden="true"></i></a>
+	
+	
+	
+	
+	<a href="mailto:admin@arloor.com" rel="me" target="_blank"><i class="fa-solid fa-at fa-lg"></i></a>
+	
+	
+	
+	
+</section>
+    </div>
+    
+<div class="copyright">
+  &copy; 2026 arloor
+  
+    <a href="https://creativecommons.org/licenses/by-sa/4.0">CC BY-SA 4.0</a>
+  
+</div>
+
+
+<div class="builtwith">
+Built with <a href="https://gohugo.io">Hugo</a> ❤️ <a href="https://github.com/arloor/hyde-arloor">hyde-arloor</a>.
+</div>
+
+
+  </div>
+</div>
+
+  <div class="content container">
+    
+    
+<article>
+  <header>
+    <h1>MACD 指标详解：计算方式、使用方法与配合指标</h1>
+    
+    
+<div class="post__meta">
+    
+    
+      <i class="fas fa-calendar-alt"></i> 2026-07-07
+    
+    
+    
+    
+    
+      
+      
+          <br/>
+           <i class="fas fa-tags"></i>
+          
+          <a class="badge badge-tag" href="/tags/a%E8%82%A1">a股</a>
+           
+      
+          <a class="badge badge-tag" href="/tags/%E6%8A%80%E6%9C%AF%E6%8C%87%E6%A0%87">技术指标</a>
+           
+      
+          <a class="badge badge-tag" href="/tags/macd">macd</a>
+           
+      
+          <a class="badge badge-tag" href="/tags/%E9%87%8F%E5%8C%96%E4%BA%A4%E6%98%93">量化交易</a>
+          
+      
+    
+    
+    <br/>
+    <i class="fas fa-clock"></i> 8 min read
+</div>
+
+
+  </header>
+  
+  
+  
+    <div class="toc-wrapper">
+      <input type="checkbox" id="tocToggle">
+      <label for="tocToggle">Table of Content</label>
+      
+          <nav id="TableOfContents">
+  <ul>
+    <li><a href="#macd-是什么">MACD 是什么</a></li>
+    <li><a href="#计算方式">计算方式</a>
+      <ul>
+        <li><a href="#第一步计算-ema">第一步：计算 EMA</a></li>
+        <li><a href="#第二步计算-dif快线">第二步：计算 DIF（快线）</a></li>
+        <li><a href="#第三步计算-dea慢线信号线">第三步：计算 DEA（慢线/信号线）</a></li>
+        <li><a href="#第四步计算-macd-柱状图">第四步：计算 MACD 柱状图</a></li>
+        <li><a href="#完整计算示例">完整计算示例</a></li>
+      </ul>
+    </li>
+    <li><a href="#如何使用-macd">如何使用 MACD</a>
+      <ul>
+        <li><a href="#金叉与死叉">金叉与死叉</a></li>
+        <li><a href="#零轴的意义">零轴的意义</a></li>
+        <li><a href="#柱状图的收缩与扩张">柱状图的收缩与扩张</a></li>
+        <li><a href="#背离">背离</a></li>
+        <li><a href="#macd-的局限性">MACD 的局限性</a></li>
+      </ul>
+    </li>
+    <li><a href="#配合指标">配合指标</a>
+      <ul>
+        <li><a href="#rsi相对强弱指标">RSI（相对强弱指标）</a></li>
+        <li><a href="#成交量volume">成交量（Volume）</a></li>
+        <li><a href="#布林带bollinger-bands">布林带（Bollinger Bands）</a></li>
+        <li><a href="#kdj随机指标">KDJ（随机指标）</a></li>
+        <li><a href="#均线系统ma">均线系统（MA）</a></li>
+      </ul>
+    </li>
+    <li><a href="#实战信号组合建议">实战信号组合建议</a>
+      <ul>
+        <li><a href="#做多信号优先级">做多信号优先级</a></li>
+        <li><a href="#做空离场信号优先级">做空/离场信号优先级</a></li>
+      </ul>
+    </li>
+    <li><a href="#我的理解">我的理解</a></li>
+    <li><a href="#附录macd-参数调整参考">附录：MACD 参数调整参考</a></li>
+  </ul>
+</nav>
+      
+    </div>
+  
+  
+  <div class="post">
+    <p>MACD（Moving Average Convergence Divergence，指数平滑异同移动平均线）是技术分析中最经典的趋势跟踪指标之一，由 Gerald Appel 于 1979 年提出。它通过两条指数移动平均线的差值来识别价格趋势的方向、强度和转折点。这篇文章整理 MACD 的完整计算过程、核心信号的使用方法，以及实战中建议配合哪些指标来提高信号质量。</p>
+<blockquote>
+<p>仅作为个人技术记录和复盘材料，不构成任何投资建议。</p>
+</blockquote>
+<h2 id="macd-是什么">MACD 是什么</h2>
+<p>MACD 本质上是一个<strong>动量振荡器</strong>：它既跟踪趋势方向（趋势跟踪属性），又衡量趋势的加速度（振荡属性）。它由三条线组成：</p>
+<table>
+	<thead>
+			<tr>
+					<th>线</th>
+					<th>别名</th>
+					<th>含义</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>DIF</td>
+					<td>快线、MACD 线</td>
+					<td>短期 EMA 减去长期 EMA</td>
+			</tr>
+			<tr>
+					<td>DEA</td>
+					<td>慢线、信号线</td>
+					<td>DIF 的 EMA</td>
+			</tr>
+			<tr>
+					<td>MACD 柱</td>
+					<td>柱状图、Histogram</td>
+					<td>DIF 与 DEA 差值的 2 倍</td>
+			</tr>
+	</tbody>
+</table>
+<p>默认参数是 <code>(12, 26, 9)</code>：短期 EMA 取 12 个周期，长期 EMA 取 26 个周期，信号线取 9 个周期。这些参数可以根据交易周期调整，但 12-26-9 是最广泛使用的标准配置。</p>
+<h2 id="计算方式">计算方式</h2>
+<h3 id="第一步计算-ema">第一步：计算 EMA</h3>
+<p>MACD 的基础是指数移动平均线（Exponential Moving Average, EMA）。EMA 与简单移动平均线（SMA）的区别在于：EMA 给近期价格更高的权重，对价格变化的反应更灵敏。</p>
+<p>EMA 的计算公式是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>EMA_t = Price_t * α + EMA_{t-1} * (1 - α)
+</span></span></code></pre></div><p>其中平滑系数 <code>α</code> 为：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>α = 2 / (N + 1)
+</span></span></code></pre></div><p><code>N</code> 是 EMA 的周期数。所以：</p>
+<table>
+	<thead>
+			<tr>
+					<th>EMA 周期</th>
+					<th>α 值</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>12</td>
+					<td>2 / 13 ≈ 0.1538</td>
+			</tr>
+			<tr>
+					<td>26</td>
+					<td>2 / 27 ≈ 0.0741</td>
+			</tr>
+			<tr>
+					<td>9</td>
+					<td>2 / 10 = 0.2000</td>
+			</tr>
+	</tbody>
+</table>
+<p>初始 EMA 值（即第一个数据点）通常取前 N 个价格的简单算术平均。</p>
+<h3 id="第二步计算-dif快线">第二步：计算 DIF（快线）</h3>
+<p>DIF 是 MACD 的核心线，代表短期和长期 EMA 之间的差值：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>DIF = EMA(close, 12) - EMA(close, 26)
+</span></span></code></pre></div><p>DIF 的含义：</p>
+<ul>
+<li><strong>DIF &gt; 0</strong>：短期 EMA 在长期 EMA 上方，短期趋势偏多。</li>
+<li><strong>DIF &lt; 0</strong>：短期 EMA 在长期 EMA 下方，短期趋势偏空。</li>
+<li><strong>DIF 上升</strong>：短期均线上穿或远离长期均线，多头力量增强。</li>
+<li><strong>DIF 下降</strong>：短期均线下穿或靠近长期均线，空头力量增强。</li>
+</ul>
+<h3 id="第三步计算-dea慢线信号线">第三步：计算 DEA（慢线/信号线）</h3>
+<p>DEA 是 DIF 的 9 周期 EMA，也叫信号线：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>DEA = EMA(DIF, 9)
+</span></span></code></pre></div><p>DEA 是对 DIF 的进一步平滑，用来过滤 DIF 的短期噪音，生成更可靠的交易信号。</p>
+<h3 id="第四步计算-macd-柱状图">第四步：计算 MACD 柱状图</h3>
+<p>柱状图（Histogram）是 DIF 与 DEA 的差值，通常乘以 2 使视觉效果更明显：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>MACD_BAR = 2 * (DIF - DEA)
+</span></span></code></pre></div><p>柱状图的含义：</p>
+<ul>
+<li><strong>正值且放大</strong>：DIF 在 DEA 上方且差距扩大，多头趋势加速。</li>
+<li><strong>正值但缩小</strong>：DIF 在 DEA 上方但差距收窄，多头动能减弱。</li>
+<li><strong>负值且放大</strong>：DIF 在 DEA 下方且差距扩大，空头趋势加速。</li>
+<li><strong>负值但缩小</strong>：DIF 在 DEA 下方但差距收窄，空头动能减弱。</li>
+</ul>
+<h3 id="完整计算示例">完整计算示例</h3>
+<p>假设某只股票最近 26 个交易日的收盘价如下（为简化只展示关键节点）：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>第 1 天收盘价:  10.00
+</span></span><span style="display:flex;"><span>第 12 天收盘价: 10.50
+</span></span><span style="display:flex;"><span>第 26 天收盘价: 10.80
+</span></span><span style="display:flex;"><span>第 27 天收盘价: 10.90
+</span></span></code></pre></div><p><strong>计算 EMA(12) 和 EMA(26) 的初始值：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>EMA(12) 初始值 = 前 12 天收盘价的简单平均
+</span></span><span style="display:flex;"><span>                = (10.00 + ... + 10.50) / 12
+</span></span><span style="display:flex;"><span>                ≈ 10.25（假设）
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>EMA(26) 初始值 = 前 26 天收盘价的简单平均
+</span></span><span style="display:flex;"><span>                = (10.00 + ... + 10.80) / 26
+</span></span><span style="display:flex;"><span>                ≈ 10.40（假设）
+</span></span></code></pre></div><p><strong>第 27 天，更新 EMA：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>α_12 = 2 / (12 + 1) = 0.1538
+</span></span><span style="display:flex;"><span>α_26 = 2 / (26 + 1) = 0.0741
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>EMA(12)_27 = 10.90 * 0.1538 + 10.25 * (1 - 0.1538)
+</span></span><span style="display:flex;"><span>           = 1.677 + 8.673
+</span></span><span style="display:flex;"><span>           = 10.350
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>EMA(26)_27 = 10.90 * 0.0741 + 10.40 * (1 - 0.0741)
+</span></span><span style="display:flex;"><span>           = 0.808 + 9.629
+</span></span><span style="display:flex;"><span>           = 10.437
+</span></span></code></pre></div><p><strong>计算 DIF：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>DIF_27 = EMA(12)_27 - EMA(26)_27
+</span></span><span style="display:flex;"><span>       = 10.350 - 10.437
+</span></span><span style="display:flex;"><span>       = -0.087
+</span></span></code></pre></div><p><strong>假设前一天 DIF = -0.050，计算 DEA：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>α_9 = 2 / (9 + 1) = 0.2000
+</span></span><span style="display:flex;"><span>
+</span></span><span style="display:flex;"><span>DEA_27 = DIF_27 * 0.2000 + DEA_26 * (1 - 0.2000)
+</span></span><span style="display:flex;"><span>       = (-0.087) * 0.2000 + (-0.060) * 0.8000
+</span></span><span style="display:flex;"><span>       = -0.0174 + (-0.0480)
+</span></span><span style="display:flex;"><span>       = -0.0654
+</span></span></code></pre></div><p><strong>计算 MACD 柱状图：</strong></p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>MACD_BAR_27 = 2 * (DIF_27 - DEA_27)
+</span></span><span style="display:flex;"><span>            = 2 * (-0.087 - (-0.0654))
+</span></span><span style="display:flex;"><span>            = 2 * (-0.0216)
+</span></span><span style="display:flex;"><span>            = -0.0432
+</span></span></code></pre></div><p>所以第 27 天的 MACD 读数是：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>DIF = -0.087
+</span></span><span style="display:flex;"><span>DEA = -0.065
+</span></span><span style="display:flex;"><span>MACD_BAR = -0.043
+</span></span></code></pre></div><p>DIF 和 DEA 都在零轴下方，且 MACD 柱为负并放大，说明当前处于空头趋势且空头动能在增强。</p>
+<h2 id="如何使用-macd">如何使用 MACD</h2>
+<h3 id="金叉与死叉">金叉与死叉</h3>
+<p>金叉和死叉是 MACD 最基础的交易信号：</p>
+<table>
+	<thead>
+			<tr>
+					<th>信号</th>
+					<th>条件</th>
+					<th>含义</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>金叉（买入信号）</td>
+					<td>DIF 上穿 DEA</td>
+					<td>短期动量转强，可能上涨</td>
+			</tr>
+			<tr>
+					<td>死叉（卖出信号）</td>
+					<td>DIF 下穿 DEA</td>
+					<td>短期动量转弱，可能下跌</td>
+			</tr>
+	</tbody>
+</table>
+<p><strong>零轴上方的金叉</strong>比零轴下方的金叉更有意义：前者出现在多头趋势中，是趋势延续的信号；后者可能只是下跌过程中的反弹。</p>
+<p>同理，<strong>零轴下方的死叉</strong>比零轴上方的死叉更可靠：前者确认空头趋势延续，后者可能只是上涨中的回调。</p>
+<h3 id="零轴的意义">零轴的意义</h3>
+<p>零轴是 DIF = 0 的位置，也就是 EMA(12) = EMA(26) 的平衡点。</p>
+<table>
+	<thead>
+			<tr>
+					<th>位置</th>
+					<th>含义</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>DIF 和 DEA 都在零轴上方</td>
+					<td>多头市场，短期均线在长期均线上方</td>
+			</tr>
+			<tr>
+					<td>DIF 和 DEA 都在零轴下方</td>
+					<td>空头市场，短期均线在长期均线下方</td>
+			</tr>
+			<tr>
+					<td>DIF 从零轴下方上穿零轴</td>
+					<td>趋势可能由空转多</td>
+			</tr>
+			<tr>
+					<td>DIF 从零轴上方下穿零轴</td>
+					<td>趋势可能由多转空</td>
+			</tr>
+	</tbody>
+</table>
+<p>零轴是一个重要的多空分界线。很多交易者只在零轴上方做多、零轴下方做空，以过滤掉逆趋势的噪音信号。</p>
+<h3 id="柱状图的收缩与扩张">柱状图的收缩与扩张</h3>
+<p>MACD 柱状图的变化速度往往领先于金叉死叉信号：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>柱状图由负转正（从放大的负值开始缩小 → 翻正）→ 多头力量正在积累
+</span></span><span style="display:flex;"><span>柱状图由正转负（从放大的正值开始缩小 → 翻负）→ 空头力量正在积累
+</span></span></code></pre></div><p>柱状图的&quot;缩小&quot;往往先于&quot;穿越&quot;。有经验的交易者会关注柱状图的收缩，作为趋势可能反转的早期预警。</p>
+<h3 id="背离">背离</h3>
+<p>背离是 MACD 最有价值的信号之一。当价格创新高/新低，但 MACD 没有同步创新高/新低时，就出现了背离。</p>
+<h4 id="顶背离看跌信号">顶背离（看跌信号）</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>价格创新高，但 DIF 或 MACD 柱的高点比前一个高点低
+</span></span></code></pre></div><p>含义：价格虽然还在涨，但上涨的动量已经减弱，趋势可能即将反转下跌。</p>
+<h4 id="底背离看涨信号">底背离（看涨信号）</h4>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>价格创新低，但 DIF 或 MACD 柱的低点比前一个低点高
+</span></span></code></pre></div><p>含义：价格虽然还在跌，但下跌的动量已经衰竭，趋势可能即将反转上涨。</p>
+<p>背离信号的可靠性：</p>
+<ul>
+<li><strong>多次背离比单次背离更可靠</strong>：连续出现 2 次或以上背离，反转概率更高。</li>
+<li><strong>零轴附近的背离比远离零轴的背离更可靠</strong>：靠近多空分界线的背离往往意味着趋势真正在切换。</li>
+<li><strong>配合成交量更可靠</strong>：顶背离时放量、底背离时缩量，信号更有效。</li>
+</ul>
+<h3 id="macd-的局限性">MACD 的局限性</h3>
+<table>
+	<thead>
+			<tr>
+					<th>局限</th>
+					<th>说明</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>滞后性</td>
+					<td>MACD 基于均线，本质是滞后指标。金叉死叉出现时，价格可能已经走了一段</td>
+			</tr>
+			<tr>
+					<td>震荡市表现差</td>
+					<td>横盘震荡时，MACD 会频繁产生假信号，反复金叉死叉</td>
+			</tr>
+			<tr>
+					<td>对参数敏感</td>
+					<td>不同周期、不同标的的最优参数可能不同</td>
+			</tr>
+			<tr>
+					<td>不适合极短线</td>
+					<td>日内超短线交易中，MACD 的信号延迟可能不可接受</td>
+			</tr>
+	</tbody>
+</table>
+<p>正因为这些局限，MACD 很少单独使用，通常需要配合其他指标来确认信号。</p>
+<h2 id="配合指标">配合指标</h2>
+<h3 id="rsi相对强弱指标">RSI（相对强弱指标）</h3>
+<p>RSI 衡量价格变动的速度和幅度，范围 0-100。它和 MACD 形成很好的互补：</p>
+<table>
+	<thead>
+			<tr>
+					<th>MACD</th>
+					<th>RSI</th>
+					<th>组合信号</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>金叉</td>
+					<td>RSI &lt; 30（超卖区）</td>
+					<td>强买入信号：超卖 + 动量转多</td>
+			</tr>
+			<tr>
+					<td>死叉</td>
+					<td>RSI &gt; 70（超买区）</td>
+					<td>强卖出信号：超买 + 动量转空</td>
+			</tr>
+			<tr>
+					<td>底背离</td>
+					<td>RSI 底背离</td>
+					<td>双重背离确认，反转概率高</td>
+			</tr>
+			<tr>
+					<td>顶背离</td>
+					<td>RSI 顶背离</td>
+					<td>双重背离确认，反转概率高</td>
+			</tr>
+	</tbody>
+</table>
+<p>MACD 看趋势方向，RSI 看超买超卖，两者结合可以避免在超买区追多、超卖区追空。</p>
+<h3 id="成交量volume">成交量（Volume）</h3>
+<p>成交量是确认 MACD 信号有效性的关键：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>金叉 + 放量 → 信号更可靠，有资金进场推动
+</span></span><span style="display:flex;"><span>金叉 + 缩量 → 信号存疑，可能是假突破
+</span></span><span style="display:flex;"><span>死叉 + 放量 → 信号更可靠，有资金离场
+</span></span><span style="display:flex;"><span>死叉 + 缩量 → 可能只是回调
+</span></span></code></pre></div><p>特别是背离信号，如果底背离出现在成交量逐步萎缩的背景下（卖压枯竭），反转的可能性更高。</p>
+<h3 id="布林带bollinger-bands">布林带（Bollinger Bands）</h3>
+<p>布林带由中轨（20 周期 SMA）和上下轨（中轨 ± 2 倍标准差）组成，用来衡量波动率和识别突破。</p>
+<table>
+	<thead>
+			<tr>
+					<th>MACD 信号</th>
+					<th>布林带位置</th>
+					<th>组合解读</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>金叉</td>
+					<td>价格触及下轨后反弹</td>
+					<td>强买入：超跌反弹 + 动量转多</td>
+			</tr>
+			<tr>
+					<td>死叉</td>
+					<td>价格触及上轨后回落</td>
+					<td>强卖出：超涨回落 + 动量转空</td>
+			</tr>
+			<tr>
+					<td>金叉</td>
+					<td>价格突破上轨</td>
+					<td>趋势启动，但需警惕短期回调</td>
+			</tr>
+			<tr>
+					<td>底背离</td>
+					<td>价格在下轨附近</td>
+					<td>底部反转信号增强</td>
+			</tr>
+	</tbody>
+</table>
+<p>布林带还可以帮助判断 MACD 信号所处的波动率环境：布林带收窄（低波动）时的 MACD 信号往往预示着即将到来的突破；布林带扩张（高波动）时的 MACD 信号更适合趋势跟踪。</p>
+<h3 id="kdj随机指标">KDJ（随机指标）</h3>
+<p>KDJ 由 K 线、D 线、J 线组成，对价格变化非常敏感，适合短期择时。</p>
+<p>与 MACD 配合时的典型用法：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>MACD 金叉（趋势信号）+ KDJ 金叉（择时信号）→ 入场时机
+</span></span><span style="display:flex;"><span>MACD 死叉（趋势信号）+ KDJ 死叉（择时信号）→ 出场时机
+</span></span></code></pre></div><p>MACD 解决&quot;做不做&quot;的问题（方向），KDJ 解决&quot;什么时候做&quot;的问题（时机）。但要注意 KDJ 在趋势行情中容易钝化，此时应以 MACD 的趋势信号为主。</p>
+<h3 id="均线系统ma">均线系统（MA）</h3>
+<p>简单移动平均线（SMA）可以作为 MACD 趋势信号的辅助确认：</p>
+<div class="highlight"><pre tabindex="0" style="color:#f8f8f2;background-color:#272822;-moz-tab-size:4;-o-tab-size:4;tab-size:4;-webkit-text-size-adjust:none;"><code class="language-text" data-lang="text"><span style="display:flex;"><span>MACD 金叉 + 价格站上 MA20 → 短期趋势确认转多
+</span></span><span style="display:flex;"><span>MACD 金叉 + 价格站上 MA60 → 中期趋势确认转多
+</span></span><span style="display:flex;"><span>MACD 死叉 + 价格跌破 MA20 → 短期趋势确认转空
+</span></span></code></pre></div><p>均线系统提供了直观的趋势参考。当 MACD 信号与关键均线的支撑/阻力位共振时，信号的可靠性会显著提高。</p>
+<h2 id="实战信号组合建议">实战信号组合建议</h2>
+<p>把上面的内容整理成一个实战决策框架：</p>
+<h3 id="做多信号优先级">做多信号优先级</h3>
+<table>
+	<thead>
+			<tr>
+					<th>优先级</th>
+					<th>条件组合</th>
+					<th>说明</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>最高</td>
+					<td>MACD 底背离 + RSI &lt; 30 + 缩量下跌后放量</td>
+					<td>多重确认的底部反转</td>
+			</tr>
+			<tr>
+					<td>高</td>
+					<td>MACD 零轴上方金叉 + 价格站上 MA20 + 放量</td>
+					<td>多头趋势中的加仓机会</td>
+			</tr>
+			<tr>
+					<td>中</td>
+					<td>MACD 金叉 + KDJ 金叉 + 布林下轨反弹</td>
+					<td>短期超跌反弹</td>
+			</tr>
+			<tr>
+					<td>低</td>
+					<td>MACD 零轴下方金叉</td>
+					<td>可能只是反弹，需谨慎</td>
+			</tr>
+	</tbody>
+</table>
+<h3 id="做空离场信号优先级">做空/离场信号优先级</h3>
+<table>
+	<thead>
+			<tr>
+					<th>优先级</th>
+					<th>条件组合</th>
+					<th>说明</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>最高</td>
+					<td>MACD 顶背离 + RSI &gt; 70 + 放量滞涨</td>
+					<td>多重确认的顶部反转</td>
+			</tr>
+			<tr>
+					<td>高</td>
+					<td>MACD 零轴下方死叉 + 价格跌破 MA20 + 放量</td>
+					<td>空头趋势确认</td>
+			</tr>
+			<tr>
+					<td>中</td>
+					<td>MACD 死叉 + KDJ 死叉 + 布林上轨回落</td>
+					<td>短期超涨回落</td>
+			</tr>
+			<tr>
+					<td>低</td>
+					<td>MACD 零轴上方死叉</td>
+					<td>可能只是回调，需观察</td>
+			</tr>
+	</tbody>
+</table>
+<h2 id="我的理解">我的理解</h2>
+<p>MACD 的核心价值不在于&quot;预测&quot;，而在于&quot;描述&quot;：它用两条均线的差值，把价格趋势的方向和强度量化成了可以观察的数字。金叉死叉告诉你&quot;动量切换了&quot;，背离告诉你&quot;动量跟不上了&quot;，柱状图告诉你&quot;动量在加速还是减速&quot;。</p>
+<p>但 MACD 有两个天然短板：它是滞后指标（基于均线），在震荡市中容易被反复打脸。所以单独用 MACD 做交易决策，胜率不会太高。它更适合作为一个&quot;过滤器&quot;——先判断大的趋势方向，再用 RSI、成交量、布林带等指标来确认入场时机和信号强度。</p>
+<p>简单说，MACD 回答的是&quot;现在是什么趋势&quot;，而不是&quot;现在该不该买&quot;。把它和其他指标组合起来，让不同指标从不同维度交叉验证同一个信号，才是技术分析真正有用的地方。</p>
+<h2 id="附录macd-参数调整参考">附录：MACD 参数调整参考</h2>
+<p>默认参数 <code>(12, 26, 9)</code> 适用于日线级别的中短期趋势跟踪。根据交易周期可以做如下调整：</p>
+<table>
+	<thead>
+			<tr>
+					<th>交易风格</th>
+					<th>建议参数</th>
+					<th>说明</th>
+			</tr>
+	</thead>
+	<tbody>
+			<tr>
+					<td>日内短线（5分钟/15分钟）</td>
+					<td><code>(6, 13, 5)</code></td>
+					<td>更灵敏，反应更快，但噪音更多</td>
+			</tr>
+			<tr>
+					<td>日线波段（默认）</td>
+					<td><code>(12, 26, 9)</code></td>
+					<td>经典配置，平衡灵敏度和可靠性</td>
+			</tr>
+			<tr>
+					<td>日线中长线</td>
+					<td><code>(19, 39, 9)</code></td>
+					<td>更平滑，减少假信号</td>
+			</tr>
+			<tr>
+					<td>周线趋势</td>
+					<td><code>(12, 26, 9)</code> 直接用周线</td>
+					<td>周线 MACD 信号比日线更可靠</td>
+			</tr>
+	</tbody>
+</table>
+<p>参数调整的原则是：<strong>缩短快线和慢线的差距 → 更灵敏但更多噪音；拉大差距 → 更平滑但更滞后</strong>。没有&quot;最优参数&quot;，关键是理解参数变化对信号的影响，然后根据自己的交易周期和风险偏好选择。</p>
+  </div>
+  
+
+<div class="navigation navigation-single">
+    
+    <a href="/posts/tick-stream-anomaly-alert-rules-20260629/" class="navigation-prev">
+      <i aria-hidden="true" class="fa fa-chevron-left"></i>
+      <span class="navigation-tittle">tick-stream：A股 tick 异常检测与飞书告警规则整理</span>
+    </a>
+    
+    
+</div>
+
+
+  
+
+  
+
+
+</article>
+
+
+  </div>
+<style>
+  .content.container {
+        width: 100%;
+        max-width: none;
+        border: none;
+        display: block;
+        box-sizing: border-box;
+        margin-left: 0;
+        margin-right: 0;
+  }
+
+   
+  @media (max-width: 767px) {
+    body:not(.type-iframe) .content.container {
+      height: calc(100vh - var(--sidebar-height, 49px));
+      overflow-y: auto;
+    }
+  }
+
+   
+  body.type-iframe .content.container {
+        height: calc(100vh - var(--sidebar-height, 49px));
+        overflow-y: auto;
+  }
+
+  body:not(.type-iframe) .content.container {
+        padding-left: max(1.5rem, calc((100% - var(--content-max-width, 38rem)) / 2));
+        padding-right: max(1.5rem, calc((100% - var(--content-max-width, 38rem)) / 2));
+  }
+</style>
+<script>
+    (function () {
+        var content = document.querySelector('.content.container');
+        if (!content) return;
+
+        
+        function needsContentScroll() {
+            return document.body.classList.contains('type-iframe') ||
+                   window.matchMedia('(max-width: 767px)').matches;
+        }
+
+        
+        
+        
+        function updateHeight() {
+            if (needsContentScroll()) {
+                var available = window.innerHeight - content.getBoundingClientRect().top;
+                content.style.height = Math.max(0, available) + 'px';
+            } else {
+                content.style.height = '';
+            }
+        }
+
+        
+        
+        
+        function scrollToHash() {
+            if (!needsContentScroll() || !location.hash || location.hash === '#') return;
+            var id = location.hash.slice(1);
+            try { id = decodeURIComponent(id); } catch (e) {}
+            var el = document.getElementById(id);
+            if (el) try { el.scrollIntoView({ block: 'start', inline: 'nearest' }); } catch (e) { el.scrollIntoView(true); }
+        }
+
+        function init() { updateHeight(); scrollToHash(); }
+
+        
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', init, { once: true });
+        } else {
+            init();
+        }
+        
+        window.addEventListener('load', init);
+        
+        window.addEventListener('pageshow', init);
+        
+        window.addEventListener('hashchange', scrollToHash);
+
+        
+        var resizeTimer;
+        window.addEventListener('resize', function () {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(updateHeight, 120);
+        });
+
+        
+        
+        var menuToggle = document.getElementById('menuToggle');
+        if (menuToggle) {
+            menuToggle.addEventListener('change', function () {
+                updateHeight();
+                setTimeout(updateHeight, 250);
+            });
+        }
+    })();
+</script>
+  
+    
+
+
+
+<script defer src="/js/all.js" crossorigin="anonymous"></script>
+
+    
+    
+    <script src="/js/highlight.min.js"></script>
+    <script src="/js/languages/dos.min.js"></script>
+        
+    <script type="text/javascript">
+        
+        hljs.highlightAll();
+    </script>
+    
+
+<style>
+    .code-block-wrapper {
+        position: relative;
+    }
+    .copy-code-button {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        padding: 6px;
+        background: rgba(255, 255, 255, 0.1);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 4px;
+        cursor: pointer;
+        opacity: 0;
+        transition: opacity 0.3s, background 0.3s;
+        z-index: 10;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    .copy-code-button svg {
+        width: 16px;
+        height: 16px;
+        fill: #fff;
+        transition: fill 0.3s;
+    }
+    .code-block-wrapper:hover .copy-code-button {
+        opacity: 1;
+    }
+    .copy-code-button:hover {
+        background: rgba(255, 255, 255, 0.2);
+    }
+    .copy-code-button.copied {
+        background: rgba(46, 160, 67, 0.8);
+        border-color: rgba(46, 160, 67, 1);
+    }
+    .copy-code-button.copied svg {
+        fill: #fff;
+    }
+</style>
+<script type="text/javascript">
+    document.addEventListener('DOMContentLoaded', function() {
+        
+        document.querySelectorAll('pre code').forEach(function(codeBlock) {
+            var pre = codeBlock.parentNode;
+            
+            
+            if (pre.parentNode.classList.contains('code-block-wrapper')) {
+                return;
+            }
+            
+            
+            var wrapper = document.createElement('div');
+            wrapper.className = 'code-block-wrapper';
+            pre.parentNode.insertBefore(wrapper, pre);
+            wrapper.appendChild(pre);
+            
+            
+            var button = document.createElement('button');
+            button.className = 'copy-code-button';
+            button.innerHTML = '<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path></svg>';
+            button.setAttribute('aria-label', '复制代码');
+            button.setAttribute('title', '复制代码');
+            
+            var copyIcon = '<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16"><path d="M0 6.75C0 5.784.784 5 1.75 5h1.5a.75.75 0 0 1 0 1.5h-1.5a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-1.5a.75.75 0 0 1 1.5 0v1.5A1.75 1.75 0 0 1 9.25 16h-7.5A1.75 1.75 0 0 1 0 14.25Z"></path><path d="M5 1.75C5 .784 5.784 0 6.75 0h7.5C15.216 0 16 .784 16 1.75v7.5A1.75 1.75 0 0 1 14.25 11h-7.5A1.75 1.75 0 0 1 5 9.25Zm1.75-.25a.25.25 0 0 0-.25.25v7.5c0 .138.112.25.25.25h7.5a.25.25 0 0 0 .25-.25v-7.5a.25.25 0 0 0-.25-.25Z"></path></svg>';
+            var checkIcon = '<svg aria-hidden="true" height="16" viewBox="0 0 16 16" version="1.1" width="16"><path d="M13.78 4.22a.75.75 0 0 1 0 1.06l-7.25 7.25a.75.75 0 0 1-1.06 0L2.22 9.28a.751.751 0 0 1 .018-1.042.751.751 0 0 1 1.042-.018L6 10.94l6.72-6.72a.75.75 0 0 1 1.06 0Z"></path></svg>';
+            
+            
+            button.addEventListener('click', function() {
+                var code = codeBlock.textContent;
+                navigator.clipboard.writeText(code).then(function() {
+                    button.innerHTML = checkIcon;
+                    button.classList.add('copied');
+                    button.setAttribute('aria-label', '已复制');
+                    button.setAttribute('title', '已复制');
+                    setTimeout(function() {
+                        button.innerHTML = copyIcon;
+                        button.classList.remove('copied');
+                        button.setAttribute('aria-label', '复制代码');
+                        button.setAttribute('title', '复制代码');
+                    }, 2000);
+                }).catch(function(err) {
+                    console.error('复制失败:', err);
+                });
+            });
+            
+            wrapper.appendChild(button);
+        });
+    });
+</script>
+
+
+
+
+    
+
+
+
+</body>
+
+</html>
